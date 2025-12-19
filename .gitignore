@@ -1,0 +1,3 @@
+ecommerce-backend/node_modules/
+.env
+*.log
