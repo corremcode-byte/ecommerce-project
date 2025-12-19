@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Products - Furnii Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🛋️</span>
+                <span class="logo-text">Furnii</span>
+            </a>
+
+            <div class="search-bar">
+                <div class="search-wrapper">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search for furniture, decor, and more..." autocomplete="off">
+                    <button class="search-icon" onclick="performSearch()" type="button">🔍</button>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <!-- Account Dropdown -->
+                <div class="header-dropdown" id="accountDropdown">
+                    <button class="header-link dropdown-trigger" onclick="toggleDropdown('accountDropdown')">
+                        <span>👤</span>
+                        <span id="accountText">Account</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <div id="loggedOutMenu" style="display:none;">
+                            <a href="register.html" class="dropdown-item">Sign Up</a>
+                            <a href="login.html" class="dropdown-item">Sign In</a>
+                        </div>
+                        <div id="loggedInMenu" style="display:none;">
+                            <a href="profile.html" class="dropdown-item">My Profile</a>
+                            <a href="orders.html" class="dropdown-item">My Orders</a>
+                            <div class="dropdown-divider"></div>
+                            <a href="#" class="dropdown-item" onclick="handleLogout(event)">Logout</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wishlist -->
+                <a href="wishlist.html" class="header-link">
+                    <span>❤️</span>
+                    <span>Wishlist</span>
+                    <span class="cart-badge" id="wishlistCount">0</span>
+                </a>
+
+                <!-- Cart -->
+                <a href="cart.html" class="header-link">
+                    <span>🛒</span>
+                    <span>Cart</span>
+                    <span class="cart-badge" id="cartBadge">0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-content">
+            <a href="index.html">Home</a>
+            <a href="products.html" class="active" onclick="clearFilters(event)">All Products</a>
+            <a href="#" onclick="filterCategory('seating', event)">Seating</a>
+            <a href="#" onclick="filterCategory('tables', event)">Tables</a>
+            <a href="#" onclick="filterCategory('storage', event)">Storage</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="page-hero">
+            <h1 class="page-title" id="pageTitle">All Products</h1>
+            <p class="page-subtitle" id="pageSubtitle">Discover our complete collection of premium furniture</p>
+        </div>
+
+        <div id="productsGrid" class="products-grid">
+            <p style="text-align:center; padding:40px;">Loading products...</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Furnii. All rights reserved. | Premium Furniture Store</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let currentUser = JSON.parse(localStorage.getItem('user'));
+        let userId = localStorage.getItem('userId');
+        let allProducts = [];
+        let wishlistItems = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, initializing...');
+            updateHeaderUI();
+            loadWishlist();
+            loadCartCount();
+            loadProducts();
+            
+            // Setup search - MULTIPLE WAYS TO TRIGGER
+            const searchInput = document.getElementById('searchInput');
+            const searchIcon = document.querySelector('.search-icon');
+            
+            // Method 1: Type and wait
+            searchInput.addEventListener('input', function(e) {
+                console.log('Search input:', e.target.value);
+                performSearch();
+            });
+            
+            // Method 2: Press Enter
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    console.log('Enter pressed');
+                    performSearch();
+                }
+            });
+            
+            // Method 3: Click search icon
+            if (searchIcon) {
+                searchIcon.addEventListener('click', function() {
+                    console.log('Search icon clicked');
+                    performSearch();
+                });
+            }
+        });
+
+        // Update header based on login status
+        function updateHeaderUI() {
+            if (currentUser) {
+                document.getElementById('accountText').textContent = currentUser.full_name.split(' ')[0];
+                document.getElementById('loggedOutMenu').style.display = 'none';
+                document.getElementById('loggedInMenu').style.display = 'block';
+            } else {
+                document.getElementById('accountText').textContent = 'Account';
+                document.getElementById('loggedOutMenu').style.display = 'block';
+                document.getElementById('loggedInMenu').style.display = 'none';
+            }
+        }
+
+        // Toggle dropdown
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            dropdown.classList.toggle('active');
+            document.querySelectorAll('.header-dropdown').forEach(d => {
+                if (d.id !== id) d.classList.remove('active');
+            });
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.header-dropdown')) {
+                document.querySelectorAll('.header-dropdown').forEach(d => {
+                    d.classList.remove('active');
+                });
+            }
+        });
+
+        // Handle logout
+        function handleLogout(e) {
+            e.preventDefault();
+            localStorage.clear();
+            showToast('Logged out successfully', 'success');
+            setTimeout(() => window.location.href = 'index.html', 1000);
+        }
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Load cart count
+        function loadCartCount() {
+            if (userId) {
+                fetch(`${API_URL}/api/cart/${userId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('cartBadge').textContent = data.data.items.length;
+                        }
+                    })
+                    .catch(err => console.error(err));
+            }
+        }
+
+        // Load wishlist
+        async function loadWishlist() {
+            if (!userId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/wishlist/${userId}`);
+                const data = await response.json();
+                if (data.success) {
+                    wishlistItems = data.data.map(item => item.product_id);
+                    document.getElementById('wishlistCount').textContent = wishlistItems.length;
+                }
+            } catch (error) {
+                console.error('Error loading wishlist:', error);
+            }
+        }
+
+        // Load products
+        async function loadProducts() {
+            try {
+                console.log('Loading products from API...');
+                const response = await fetch(`${API_URL}/api/products`);
+                const data = await response.json();
+
+                if (data.success) {
+                    allProducts = data.data;
+                    console.log('Loaded products:', allProducts.length);
+                    
+                    // Check URL for category
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const category = urlParams.get('category');
+                    
+                    if (category) {
+                        filterCategory(category);
+                    } else {
+                        displayProducts(allProducts);
+                    }
+                }
+            } catch (err) {
+                console.error('Error loading products:', err);
+                document.getElementById('productsGrid').innerHTML = '<p style="text-align:center; color:#ef4444;">Error loading products. Make sure server is running.</p>';
+            }
+        }
+
+        // PERFORM SEARCH - SIMPLIFIED
+        function performSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            console.log('Searching for:', searchTerm);
+            console.log('Total products:', allProducts.length);
+            
+            if (searchTerm === '') {
+                console.log('Empty search, showing all products');
+                displayProducts(allProducts);
+                document.getElementById('pageTitle').textContent = 'All Products';
+                document.getElementById('pageSubtitle').textContent = 'Discover our complete collection of premium furniture';
+                return;
+            }
+            
+            // Search in product name and description
+            const filtered = allProducts.filter(product => {
+                const nameMatch = product.name.toLowerCase().includes(searchTerm);
+                const descMatch = product.description && product.description.toLowerCase().includes(searchTerm);
+                const categoryMatch = product.category_name && product.category_name.toLowerCase().includes(searchTerm);
+                
+                return nameMatch || descMatch || categoryMatch;
+            });
+            
+            console.log('Found products:', filtered.length);
+            
+            displayProducts(filtered);
+            document.getElementById('pageTitle').textContent = `Search: "${searchTerm}"`;
+            document.getElementById('pageSubtitle').textContent = `Found ${filtered.length} product${filtered.length !== 1 ? 's' : ''}`;
+        }
+
+        // Filter by category
+        function filterCategory(category, event) {
+            if (event) {
+                event.preventDefault();
+                document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+                event.target.classList.add('active');
+            }
+            
+            console.log('Filtering category:', category);
+            
+            // Clear search
+            document.getElementById('searchInput').value = '';
+            
+            const categoryMap = {
+                'seating': ['chair', 'sofa', 'seat'],
+                'tables': ['table', 'desk'],
+                'storage': ['shelf', 'bookshelf', 'storage', 'cabinet']
+            };
+            
+            const searchTerms = categoryMap[category] || [category];
+            
+            const filtered = allProducts.filter(p => {
+                const productName = p.name.toLowerCase();
+                return searchTerms.some(term => productName.includes(term));
+            });
+            
+            console.log('Category filtered products:', filtered.length);
+            
+            const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1);
+            document.getElementById('pageTitle').textContent = categoryTitle;
+            document.getElementById('pageSubtitle').textContent = `Browse our ${categoryTitle.toLowerCase()} collection`;
+            
+            displayProducts(filtered);
+        }
+
+        // Clear filters
+        function clearFilters(event) {
+            if (event) {
+                event.preventDefault();
+                document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+                event.target.classList.add('active');
+            }
+            
+            document.getElementById('searchInput').value = '';
+            document.getElementById('pageTitle').textContent = 'All Products';
+            document.getElementById('pageSubtitle').textContent = 'Discover our complete collection of premium furniture';
+            
+            displayProducts(allProducts);
+        }
+
+        // Display products
+        function displayProducts(products) {
+            const container = document.getElementById('productsGrid');
+            
+            console.log('Displaying products:', products.length);
+            
+            if (products.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align:center; padding:60px 20px;">
+                        <div class="empty-icon" style="font-size:64px; margin-bottom:16px;">🔍</div>
+                        <h3 style="font-size:24px; color:#64748b; margin-bottom:12px;">No products found</h3>
+                        <p style="color:#94a3b8; margin-bottom:24px;">Try a different search or browse all products</p>
+                        <button onclick="clearFilters()" class="btn btn-primary">View All Products</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = products.map(p => {
+                const price = p.sale_price || p.price;
+                const original = p.sale_price ? p.price : null;
+                const discount = original ? Math.round((1 - price/original) * 100) : 0;
+                const isInWishlist = wishlistItems.includes(p.id);
+
+                return `
+                    <div class="product-card">
+                        <div class="product-image-wrapper">
+                            ${discount > 0 ? `<div class="discount-badge">${discount}% OFF</div>` : ''}
+                            <button class="wishlist-btn ${isInWishlist ? 'in-wishlist' : ''}" onclick="toggleWishlist(${p.id}, event)">
+                                ${isInWishlist ? '❤️' : '♡'}
+                            </button>
+                            <img src="${p.image}" alt="${p.name}" class="product-image" onerror="this.src='https://via.placeholder.com/400x400?text=${encodeURIComponent(p.name)}'">
+                        </div>
+                        <div class="product-info">
+                            <h3 class="product-title">${p.name}</h3>
+                            <p class="product-description">${p.description || 'Premium quality furniture piece'}</p>
+                            <div class="product-rating">
+                                <span class="stars">★★★★★</span>
+                                <span class="rating-count">(${Math.floor(Math.random() * 500) + 50})</span>
+                            </div>
+                            <div class="product-pricing">
+                                <span class="current-price">₹${parseFloat(price).toLocaleString('en-IN')}</span>
+                                ${original ? `<span class="original-price">₹${parseFloat(original).toLocaleString('en-IN')}</span>` : ''}
+                            </div>
+                            <p class="product-stock">${p.stock_quantity > 0 ? `${p.stock_quantity} in stock` : 'Out of stock'}</p>
+                            <button class="btn btn-primary btn-full" onclick="addToCart(${p.id}, '${p.name.replace(/'/g, "\\'")}', event)" ${p.stock_quantity === 0 ? 'disabled' : ''}>
+                                ${p.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Add to cart
+        async function addToCart(productId, productName, event) {
+            event.preventDefault();
+            
+            if (!userId) {
+                showToast('Please login to add items to cart', 'error');
+                setTimeout(() => window.location.href = 'login.html', 1500);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/cart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        product_id: productId,
+                        quantity: 1
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`${productName} added to cart!`, 'success');
+                    loadCartCount();
+                } else {
+                    showToast(data.message || 'Failed to add to cart', 'error');
+                }
+            } catch (error) {
+                showToast('Error adding to cart', 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        // Toggle wishlist
+        async function toggleWishlist(productId, event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            if (!userId) {
+                showToast('Please login to add to wishlist', 'error');
+                setTimeout(() => window.location.href = 'login.html', 1500);
+                return;
+            }
+
+            const isInWishlist = wishlistItems.includes(productId);
+            
+            try {
+                if (isInWishlist) {
+                    const wishlistItem = await fetch(`${API_URL}/api/wishlist/${userId}`)
+                        .then(res => res.json())
+                        .then(data => data.data.find(item => item.product_id === productId));
+                    
+                    if (wishlistItem) {
+                        await fetch(`${API_URL}/api/wishlist/${wishlistItem.id}`, { method: 'DELETE' });
+                        wishlistItems = wishlistItems.filter(id => id !== productId);
+                        showToast('Removed from wishlist', 'success');
+                    }
+                } else {
+                    const response = await fetch(`${API_URL}/api/wishlist`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: parseInt(userId),
+                            product_id: productId
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        wishlistItems.push(productId);
+                        showToast('Added to wishlist', 'success');
+                    }
+                }
+                
+                loadWishlist();
+                
+                const btn = event.target.closest('.wishlist-btn');
+                btn.textContent = wishlistItems.includes(productId) ? '❤️' : '♡';
+                btn.classList.toggle('in-wishlist');
+                
+            } catch (error) {
+                showToast('Error updating wishlist', 'error');
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
+``

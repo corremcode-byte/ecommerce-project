@@ -1,0 +1,180 @@
+### 1. Register New User
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "john",
+  "email": "john@example.com",
+  "password": "password123",
+  "full_name": "John Doe",
+  "mobile": "+91 9876543210",
+  "date_of_birth": "1990-01-15"
+}
+
+###
+
+### 2. Login User
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+###
+
+### 3. Get All Products
+GET http://localhost:5000/api/products
+
+###
+
+### 4. Get All Categories
+GET http://localhost:5000/api/categories
+
+###
+
+### 5. Add Product to Cart
+POST http://localhost:5000/api/cart
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "product_id": 1,
+  "quantity": 2
+}
+
+###
+
+### 6. View Cart
+GET http://localhost:5000/api/cart/1
+
+###
+
+### 7. Add Another Product to Cart
+POST http://localhost:5000/api/cart
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "product_id": 2,
+  "quantity": 1
+}
+
+###
+
+### 8. Update Cart Item Quantity
+PUT http://localhost:5000/api/cart/1
+Content-Type: application/json
+
+{
+  "quantity": 3
+}
+
+###
+
+### 9. Add to Wishlist
+POST http://localhost:5000/api/wishlist
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "product_id": 3
+}
+
+###
+
+### 10. View Wishlist
+GET http://localhost:5000/api/wishlist/1
+
+###
+
+### 11. Add Another Item to Wishlist
+POST http://localhost:5000/api/wishlist
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "product_id": 4
+}
+
+###
+
+### 12. Add Delivery Address
+POST http://localhost:5000/api/addresses
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "address_line1": "123 Main Street",
+  "address_line2": "Apartment 4B",
+  "city": "Mumbai",
+  "state": "Maharashtra",
+  "postal_code": "400001",
+  "country": "India",
+  "is_default": true
+}
+
+###
+
+### 13. Add Second Address
+POST http://localhost:5000/api/addresses
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "address_line1": "456 Park Avenue",
+  "address_line2": "Floor 2",
+  "city": "Delhi",
+  "state": "Delhi",
+  "postal_code": "110001",
+  "country": "India",
+  "is_default": false
+}
+
+###
+
+### 14. Get All User Addresses
+GET http://localhost:5000/api/addresses/1
+
+###
+
+### 15. Get User Profile
+GET http://localhost:5000/api/profile/1
+
+###
+
+### 16. Update User Profile
+PUT http://localhost:5000/api/profile/1
+Content-Type: application/json
+
+{
+  "full_name": "John Smith Doe",
+  "mobile": "+91 9999888877",
+  "date_of_birth": "1990-01-15"
+}
+
+###
+
+### 17. Place Order
+POST http://localhost:5000/api/orders
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "shipping_address_id": 1,
+  "payment_method": "Cash on Delivery",
+  "cart_items": [
+    {
+      "product_id": 1,
+      "quantity": 2,
+      "price": 13500
+    },
+    {
+      "product_id": 2,
+      "quantity": 1,
+      "price": 28000
+    }
+  ]
+}
+

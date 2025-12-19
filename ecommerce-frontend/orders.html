@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - Furnii Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🛋️</span>
+                <span class="logo-text">Furnii</span>
+            </a>
+
+            <div class="search-bar">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" placeholder="Search for furniture, decor, and more...">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a href="cart.html" class="header-link">🛒 Cart</a>
+                <a href="profile.html" class="header-link">My Account</a>
+                <a href="#" class="header-link" id="logoutLink">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-content">
+            <a href="index.html">Home</a>
+            <a href="products.html">All Products</a>
+            <a href="orders.html" class="active">My Orders</a>
+            <a href="profile.html">My Account</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="page-hero">
+            <h1 class="page-title">My Orders</h1>
+            <p class="page-subtitle">Track and manage your orders</p>
+        </div>
+
+        <div id="message" class="message" style="display:none;"></div>
+
+        <div id="ordersContainer">
+            <p style="text-align:center; padding:40px;">Loading orders...</p>
+        </div>
+    </div>
+
+    <!-- Cancel Confirmation Modal -->
+    <div id="cancelModal" class="modal" style="display:none;">
+        <div class="modal-content confirm-modal">
+            <h3 class="modal-title">Cancel Order?</h3>
+            <p class="modal-text">Are you sure you want to cancel this order?</p>
+            <div class="modal-actions">
+                <button onclick="closeCancelModal()" class="btn btn-secondary">No, Keep Order</button>
+                <button onclick="confirmCancel()" class="btn btn-primary">Yes, Cancel Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Furnii. All rights reserved. | Premium Furniture Store</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let userId = localStorage.getItem('userId');
+        let orderToCancel = null;
+
+        if (!userId) {
+            showNotification('Please login to view your orders', 'error');
+            setTimeout(() => window.location.href = 'login.html', 1500);
+        }
+
+        document.getElementById('logoutLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            showNotification('Logged out successfully', 'success');
+            setTimeout(() => window.location.href = 'index.html', 1000);
+        });
+
+        async function loadOrders() {
+            try {
+                const response = await fetch(`${API_URL}/api/orders/${userId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayOrders(data.data);
+                } else {
+                    document.getElementById('ordersContainer').innerHTML = '<p style="text-align:center;">Failed to load orders</p>';
+                }
+            } catch (error) {
+                document.getElementById('ordersContainer').innerHTML = '<p style="text-align:center; color:#ef4444;">Error loading orders</p>';
+                console.error('Error:', error);
+            }
+        }
+
+        function displayOrders(orders) {
+            const container = document.getElementById('ordersContainer');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <h3>No orders yet</h3>
+                        <p>Start shopping to see your orders here!</p>
+                        <a href="products.html" class="btn btn-primary">Browse Products</a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = orders.map(order => `
+                <div class="order-card-modern">
+                    <div class="order-header-modern">
+                        <div class="order-info-left">
+                            <h3 class="order-number">Order #${order.order_number}</h3>
+                            <p class="order-date">📅 ${new Date(order.created_at).toLocaleDateString('en-IN', { 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                            })}</p>
+                        </div>
+                        <div class="order-info-right">
+                            <span class="status-badge-modern ${order.status.toLowerCase()}">${order.status}</span>
+                            ${order.status === 'Processing' ? `<button onclick="showCancelModal(${order.id})" class="btn-cancel-order">Cancel Order</button>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="order-items-modern">
+                        ${order.items.map(item => `
+                            <div class="order-item-modern">
+                                <img src="${item.image}" alt="${item.name}" class="order-item-img" onerror="this.src='https://via.placeholder.com/80'">
+                                <div class="order-item-info">
+                                    <p class="order-item-name">${item.name}</p>
+                                    <p class="order-item-details">Quantity: ${item.quantity} • ₹${parseFloat(item.price).toLocaleString('en-IN')}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="order-footer-modern">
+                        <div class="order-address-modern">
+                            <strong>📍 Delivery Address:</strong>
+                            <p>${order.address_line1 || 'N/A'}</p>
+                            <p>${order.city}, ${order.state} - ${order.postal_code}</p>
+                        </div>
+                        <div class="order-payment-modern">
+                            <p><strong>💳 Payment:</strong> ${order.payment_method}</p>
+                            <p><strong>Status:</strong> ${order.payment_status}</p>
+                        </div>
+                        <div class="order-total-modern">
+                            <p class="order-total-label">Total Amount</p>
+                            <p class="order-total-amount">₹${parseFloat(order.total_amount).toLocaleString('en-IN')}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showCancelModal(orderId) {
+            orderToCancel = orderId;
+            document.getElementById('cancelModal').style.display = 'flex';
+        }
+
+        function closeCancelModal() {
+            orderToCancel = null;
+            document.getElementById('cancelModal').style.display = 'none';
+        }
+
+        async function confirmCancel() {
+            if (!orderToCancel) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/orders/${orderToCancel}/cancel`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('✅ Order cancelled successfully', 'success');
+                    closeCancelModal();
+                    loadOrders();
+                } else {
+                    showNotification(data.message || 'Failed to cancel order', 'error');
+                }
+            } catch (error) {
+                showNotification('Error cancelling order', 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        function showNotification(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>

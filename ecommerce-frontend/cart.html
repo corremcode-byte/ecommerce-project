@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - Furnii Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🛋️</span>
+                <span class="logo-text">Furnii</span>
+            </a>
+
+            <div class="search-bar">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" placeholder="Search for furniture, decor, and more...">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a href="profile.html" class="header-link">My Account</a>
+                <a href="orders.html" class="header-link">Orders</a>
+                <a href="#" class="header-link" id="logoutLink">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-content">
+            <a href="index.html">Home</a>
+            <a href="products.html">All Products</a>
+            <a href="cart.html" class="active">🛒 Cart</a>
+            <a href="profile.html">My Account</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="page-hero">
+            <h1 class="page-title">Shopping Cart</h1>
+            <p class="page-subtitle">Review your items before checkout</p>
+        </div>
+
+        <div id="message" class="message" style="display:none;"></div>
+
+        <div id="cartContainer">
+            <p style="text-align:center; padding:40px;">Loading cart...</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Furnii. All rights reserved. | Premium Furniture Store</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let userId = localStorage.getItem('userId');
+
+        if (!userId) {
+            alert('Please login to view your cart');
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('logoutLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = 'index.html';
+        });
+
+        async function loadCart() {
+            try {
+                const response = await fetch(`${API_URL}/api/cart/${userId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayCart(data.data);
+                } else {
+                    document.getElementById('cartContainer').innerHTML = '<p style="text-align:center;">Failed to load cart</p>';
+                }
+            } catch (error) {
+                document.getElementById('cartContainer').innerHTML = '<p style="text-align:center; color:#ef4444;">Error loading cart. Make sure server is running.</p>';
+                console.error('Error:', error);
+            }
+        }
+
+        function displayCart(cartData) {
+            const container = document.getElementById('cartContainer');
+            
+            if (cartData.items.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Your cart is empty</h3>
+                        <p>Add some products to your cart to see them here!</p>
+                        <a href="products.html" class="btn btn-primary">Browse Products</a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="cart-layout">
+                    <div class="cart-items-section">
+                        ${cartData.items.map(item => `
+                            <div class="cart-item-card">
+                                <img src="${item.image}" alt="${item.name}" class="cart-item-image" onerror="this.src='https://via.placeholder.com/120'">
+                                <div class="cart-item-details">
+                                    <h3 class="cart-item-title">${item.name}</h3>
+                                    <p class="cart-item-price">₹${parseFloat(item.sale_price || item.price).toLocaleString('en-IN')}</p>
+                                    
+                                    <div class="quantity-controls">
+                                        <button class="qty-btn" onclick="updateQuantity(${item.id}, ${item.quantity - 1})">−</button>
+                                        <span class="qty-display">${item.quantity}</span>
+                                        <button class="qty-btn" onclick="updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
+                                    </div>
+                                </div>
+                                <div class="cart-item-actions">
+                                    <p class="cart-item-total">₹${parseFloat(item.subtotal).toLocaleString('en-IN')}</p>
+                                    <button onclick="removeItem(${item.id})" class="btn-remove-small">Remove</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="cart-summary-section">
+                        <div class="summary-card">
+                            <h3 class="summary-title">Order Summary</h3>
+                            <div class="summary-row">
+                                <span>Subtotal (${cartData.items.length} items):</span>
+                                <span>₹${parseFloat(cartData.total).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>Delivery:</span>
+                                <span class="free-text">FREE</span>
+                            </div>
+                            <div class="summary-divider"></div>
+                            <div class="summary-row summary-total">
+                                <span>Total:</span>
+                                <span>₹${parseFloat(cartData.total).toLocaleString('en-IN')}</span>
+                            </div>
+                            <button onclick="proceedToCheckout()" class="btn btn-primary btn-full">Proceed to Checkout</button>
+                            <a href="products.html" class="btn btn-secondary btn-full" style="margin-top:12px;">Continue Shopping</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function updateQuantity(cartItemId, newQuantity) {
+            if (newQuantity < 1) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/cart/${cartItemId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quantity: newQuantity })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    loadCart();
+                }
+            } catch (error) {
+                console.error('Error updating quantity:', error);
+            }
+        }
+
+        async function removeItem(cartItemId) {
+            if (!confirm('Remove this item from cart?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/cart/${cartItemId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('✅ Item removed from cart', 'success');
+                    loadCart();
+                }
+            } catch (error) {
+                console.error('Error removing item:', error);
+            }
+        }
+
+        function proceedToCheckout() {
+            window.location.href = 'checkout.html';
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        loadCart();
+    </script>
+</body>
+</html>

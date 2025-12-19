@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Furnii Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🛋️</span>
+                <span class="logo-text">Furnii</span>
+            </a>
+
+            <div class="search-bar">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" placeholder="Search for furniture, decor, and more...">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a href="cart.html" class="header-link">🛒 Cart</a>
+                <a href="profile.html" class="header-link">My Account</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-content">
+            <a href="index.html">Home</a>
+            <a href="products.html">All Products</a>
+            <a href="checkout.html" class="active">Checkout</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="page-hero">
+            <h1 class="page-title">Checkout</h1>
+            <p class="page-subtitle">Complete your purchase</p>
+        </div>
+
+        <div id="message" class="message" style="display:none;"></div>
+
+        <div class="checkout-layout">
+            <!-- Left Side - Address & Payment -->
+            <div class="checkout-left">
+                <!-- Delivery Address Section -->
+                <div class="checkout-card">
+                    <h3 class="checkout-card-title">📍 Delivery Address</h3>
+                    <div id="addressSelection"></div>
+                    <a href="profile.html" class="link-button">+ Add New Address</a>
+                </div>
+
+                <!-- Payment Method Section -->
+                <div class="checkout-card">
+                    <h3 class="checkout-card-title">💳 Payment Method</h3>
+                    <div class="payment-grid">
+                        <label class="payment-card">
+                            <input type="radio" name="payment" value="Cash on Delivery" checked>
+                            <div class="payment-content">
+                                <span class="payment-icon">💵</span>
+                                <div>
+                                    <div class="payment-name">Cash on Delivery</div>
+                                    <div class="payment-desc">Pay when you receive</div>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="payment-card">
+                            <input type="radio" name="payment" value="Credit Card">
+                            <div class="payment-content">
+                                <span class="payment-icon">💳</span>
+                                <div>
+                                    <div class="payment-name">Credit/Debit Card</div>
+                                    <div class="payment-desc">Visa, Mastercard, Amex</div>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="payment-card">
+                            <input type="radio" name="payment" value="UPI">
+                            <div class="payment-content">
+                                <span class="payment-icon">📱</span>
+                                <div>
+                                    <div class="payment-name">UPI</div>
+                                    <div class="payment-desc">Google Pay, PhonePe, Paytm</div>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="payment-card">
+                            <input type="radio" name="payment" value="Net Banking">
+                            <div class="payment-content">
+                                <span class="payment-icon">🏦</span>
+                                <div>
+                                    <div class="payment-name">Net Banking</div>
+                                    <div class="payment-desc">All major banks</div>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="payment-card">
+                            <input type="radio" name="payment" value="Wallet">
+                            <div class="payment-content">
+                                <span class="payment-icon">👛</span>
+                                <div>
+                                    <div class="payment-name">Wallet</div>
+                                    <div class="payment-desc">Paytm, Amazon Pay</div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side - Order Summary -->
+            <div class="checkout-right">
+                <div class="order-summary-card">
+                    <h3 class="summary-title">Order Summary</h3>
+                    <div id="orderSummary"></div>
+                    <button onclick="placeOrder()" class="btn btn-primary btn-full" id="placeOrderBtn">
+                        <span id="btnText">Place Order</span>
+                        <span id="btnLoader" style="display:none;">⏳ Processing...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal" style="display:none;">
+        <div class="modal-content success-modal">
+            <div class="success-icon">✅</div>
+            <h2 class="success-title">Order Placed Successfully!</h2>
+            <p class="success-message" id="successMessage"></p>
+            <button onclick="goToOrders()" class="btn btn-primary">View My Orders</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Furnii. All rights reserved. | Premium Furniture Store</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let userId = localStorage.getItem('userId');
+        let cartData = null;
+        let addresses = [];
+        let selectedAddress = null;
+
+        if (!userId) {
+            showNotification('Please login to checkout', 'error');
+            setTimeout(() => window.location.href = 'login.html', 1500);
+        }
+
+        async function loadCheckoutData() {
+            try {
+                const cartResponse = await fetch(`${API_URL}/api/cart/${userId}`);
+                const cartResult = await cartResponse.json();
+                
+                if (!cartResult.success || cartResult.data.items.length === 0) {
+                    showNotification('Your cart is empty!', 'error');
+                    setTimeout(() => window.location.href = 'cart.html', 1500);
+                    return;
+                }
+                
+                cartData = cartResult.data;
+
+                const addressResponse = await fetch(`${API_URL}/api/addresses/${userId}`);
+                const addressResult = await addressResponse.json();
+                
+                if (addressResult.success && addressResult.data.length > 0) {
+                    addresses = addressResult.data;
+                    displayAddresses();
+                } else {
+                    document.getElementById('addressSelection').innerHTML = `
+                        <div class="empty-notice">
+                            <p>📍 No delivery address found</p>
+                            <a href="profile.html" class="btn btn-primary" style="margin-top:12px;">Add Address</a>
+                        </div>
+                    `;
+                    document.getElementById('placeOrderBtn').disabled = true;
+                }
+
+                displayOrderSummary();
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to load checkout data', 'error');
+            }
+        }
+
+        function displayAddresses() {
+            const container = document.getElementById('addressSelection');
+            const defaultAddr = addresses.find(a => a.is_default) || addresses[0];
+            selectedAddress = defaultAddr.id;
+
+            container.innerHTML = addresses.map(addr => `
+                <label class="address-radio-card ${addr.id === selectedAddress ? 'selected' : ''}">
+                    <input type="radio" name="address" value="${addr.id}" ${addr.id === selectedAddress ? 'checked' : ''} onchange="selectAddress(${addr.id})">
+                    <div class="address-radio-content">
+                        ${addr.is_default ? '<span class="default-badge">Default</span>' : ''}
+                        <p class="address-name"><strong>${addr.address_line1}</strong></p>
+                        ${addr.address_line2 ? `<p class="address-text">${addr.address_line2}</p>` : ''}
+                        <p class="address-text">${addr.city}, ${addr.state} - ${addr.postal_code}</p>
+                        <p class="address-text">${addr.country}</p>
+                    </div>
+                </label>
+            `).join('');
+        }
+
+        function selectAddress(addressId) {
+            selectedAddress = addressId;
+            document.querySelectorAll('.address-radio-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.target.closest('.address-radio-card').classList.add('selected');
+        }
+
+        function displayOrderSummary() {
+            const container = document.getElementById('orderSummary');
+            
+            container.innerHTML = `
+                <div class="summary-items">
+                    ${cartData.items.map(item => `
+                        <div class="summary-item">
+                            <img src="${item.image}" alt="${item.name}" class="summary-item-img">
+                            <div class="summary-item-details">
+                                <p class="summary-item-name">${item.name}</p>
+                                <p class="summary-item-qty">Qty: ${item.quantity}</p>
+                            </div>
+                            <p class="summary-item-price">₹${parseFloat(item.subtotal).toLocaleString('en-IN')}</p>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="summary-divider"></div>
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span>₹${parseFloat(cartData.total).toLocaleString('en-IN')}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Delivery:</span>
+                    <span class="free-text">FREE</span>
+                </div>
+                <div class="summary-divider"></div>
+                <div class="summary-row summary-total">
+                    <span>Total:</span>
+                    <span>₹${parseFloat(cartData.total).toLocaleString('en-IN')}</span>
+                </div>
+            `;
+        }
+
+        async function placeOrder() {
+            if (!selectedAddress) {
+                showNotification('Please select a delivery address', 'error');
+                return;
+            }
+
+            const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
+            const btn = document.getElementById('placeOrderBtn');
+            btn.disabled = true;
+            document.getElementById('btnText').style.display = 'none';
+            document.getElementById('btnLoader').style.display = 'inline';
+
+            try {
+                const response = await fetch(`${API_URL}/api/orders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        shipping_address_id: selectedAddress,
+                        payment_method: paymentMethod,
+                        cart_items: cartData.items.map(item => ({
+                            product_id: item.product_id,
+                            quantity: item.quantity,
+                            price: item.sale_price || item.price
+                        }))
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('successMessage').textContent = `Order Number: ${data.data.order_number}`;
+                    document.getElementById('successModal').style.display = 'flex';
+                } else {
+                    showNotification(data.message || 'Failed to place order', 'error');
+                    btn.disabled = false;
+                    document.getElementById('btnText').style.display = 'inline';
+                    document.getElementById('btnLoader').style.display = 'none';
+                }
+            } catch (error) {
+                showNotification('Error placing order', 'error');
+                btn.disabled = false;
+                document.getElementById('btnText').style.display = 'inline';
+                document.getElementById('btnLoader').style.display = 'none';
+                console.error('Error:', error);
+            }
+        }
+
+        function goToOrders() {
+            window.location.href = 'orders.html';
+        }
+
+        function showNotification(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        loadCheckoutData();
+    </script>
+</body>
+</html>

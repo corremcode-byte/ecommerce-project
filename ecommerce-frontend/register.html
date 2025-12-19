@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Furnii Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🛋️</span>
+                <span class="logo-text">Furnii</span>
+            </a>
+
+            <div class="search-bar">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" placeholder="Search for furniture, decor, and more...">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a href="login.html" class="header-link">Sign In</a>
+                <a href="products.html" class="header-link">Browse</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-content">
+            <a href="index.html">Home</a>
+            <a href="products.html">All Products</a>
+            <a href="register.html" class="active">Sign Up</a>
+        </div>
+    </nav>
+
+    <!-- Register Form -->
+    <div class="form-page">
+        <div class="form-container">
+            <h2 class="form-title">Create Your Account</h2>
+            <p class="form-subtitle">Join us to start shopping!</p>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label class="form-label">Username *</label>
+                    <input type="text" id="username" class="form-input" required placeholder="Choose a username" minlength="3">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email Address *</label>
+                    <input type="email" id="email" class="form-input" required placeholder="your.email@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password *</label>
+                    <input type="password" id="password" class="form-input" required placeholder="Choose a strong password" minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" id="full_name" class="form-input" required placeholder="Your full name">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Mobile Number *</label>
+                    <input type="tel" id="mobile" class="form-input" required placeholder="+91 9876543210">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Date of Birth *</label>
+                    <input type="date" id="date_of_birth" class="form-input" required>
+                </div>
+
+                <div id="message" class="message" style="display:none;"></div>
+
+                <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+            </form>
+
+            <p class="form-footer">
+                Already have an account? <a href="login.html">Login here</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Furnii. All rights reserved. | Premium Furniture Store</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = 'Creating your account...';
+            messageDiv.className = 'message info';
+            messageDiv.style.display = 'block';
+
+            const formData = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                full_name: document.getElementById('full_name').value,
+                mobile: document.getElementById('mobile').value,
+                date_of_birth: document.getElementById('date_of_birth').value
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.textContent = '✅ Registration successful! Redirecting...';
+                    messageDiv.className = 'message success';
+                    
+                    localStorage.setItem('user', JSON.stringify(data.data));
+                    localStorage.setItem('userId', data.data.id);
+                    
+                    setTimeout(() => {
+                        window.location.href = 'products.html';
+                    }, 1500);
+                } else {
+                    messageDiv.textContent = '❌ ' + (data.message || 'Registration failed');
+                    messageDiv.className = 'message error';
+                }
+            } catch (error) {
+                messageDiv.textContent = '❌ Error: Unable to connect to server. Make sure your backend is running.';
+                messageDiv.className = 'message error';
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Furniture Store - Modern Home Furniture Online</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🛋️</span>
+                <span class="logo-text">Furnii</span>
+            </a>
+
+            <div class="search-bar">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" placeholder="Search for furniture, decor, and more...">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a href="register.html" class="header-link">Sign Up</a>
+                <a href="login.html" class="header-link">Sign In</a>
+                <a href="cart.html" class="header-link">
+                    🛒 Cart
+                    <span class="cart-badge" id="cartBadge">0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-content">
+            <a href="index.html" class="active">Home</a>
+            <a href="products.html">All Products</a>
+            <a href="products.html?category=seating">Seating</a>
+            <a href="products.html?category=tables">Tables</a>
+            <a href="products.html?category=storage">Storage</a>
+            <a href="products.html?category=bedroom">Bedroom</a>
+            <a href="#deals">Deals</a>
+            <a href="profile.html">My Account</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-background"></div>
+            <div class="hero-content">
+                <h1 class="hero-title">Discover Furniture That Defines You</h1>
+                <p class="hero-subtitle">Premium quality furniture at unbeatable prices. Transform your space today.</p>
+                <div class="hero-buttons">
+                    <a href="products.html" class="btn btn-primary">Shop Now</a>
+                    <a href="#categories" class="btn btn-outline">Explore Categories</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Categories -->
+        <section id="categories" class="section">
+            <div class="section-header">
+                <h2 class="section-title">Shop by Category</h2>
+            </div>
+            <div class="categories-grid">
+                <a href="products.html?category=seating" class="category-card">
+                    <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=600&fit=crop" alt="Seating">
+                    <div class="category-overlay">
+                        <h3 class="category-title">Seating</h3>
+                        <p class="category-count">150+ Products</p>
+                    </div>
+                </a>
+                <a href="products.html?category=tables" class="category-card">
+                    <img src="https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=600&h=600&fit=crop" alt="Tables">
+                    <div class="category-overlay">
+                        <h3 class="category-title">Tables</h3>
+                        <p class="category-count">80+ Products</p>
+                    </div>
+                </a>
+                <a href="products.html?category=storage" class="category-card">
+                    <img src="https://images.unsplash.com/photo-1594620302200-9a762244a156?w=600&h=600&fit=crop" alt="Storage">
+                    <div class="category-overlay">
+                        <h3 class="category-title">Storage</h3>
+                        <p class="category-count">120+ Products</p>
+                    </div>
+                </a>
+                <a href="products.html?category=bedroom" class="category-card">
+                    <img src="https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=600&h=600&fit=crop" alt="Bedroom">
+                    <div class="category-overlay">
+                        <h3 class="category-title">Bedroom</h3>
+                        <p class="category-count">200+ Products</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- Featured Products -->
+        <section id="deals" class="section">
+            <div class="section-header">
+                <h2 class="section-title">Hot Deals This Week</h2>
+                <a href="products.html" class="view-all">View all →</a>
+            </div>
+            <div id="featuredProducts" class="products-grid">
+                <!-- Products loaded by JavaScript -->
+            </div>
+        </section>
+
+        <!-- All Products -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Popular Products</h2>
+                <a href="products.html" class="view-all">View all →</a>
+            </div>
+            <div id="allProducts" class="products-grid">
+                <!-- Products loaded by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Features -->
+        <section class="section">
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">✨</div>
+                    <h3 class="feature-title">Premium Quality</h3>
+                    <p class="feature-description">Hand-selected furniture from trusted manufacturers</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚚</div>
+                    <h3 class="feature-title">Free Delivery</h3>
+                    <p class="feature-description">Free shipping on orders above ₹10,000</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💳</div>
+                    <h3 class="feature-title">Secure Payments</h3>
+                    <p class="feature-description">100% secure payment processing</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">↩️</div>
+                    <h3 class="feature-title">Easy Returns</h3>
+                    <p class="feature-description">30-day hassle-free return policy</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Furnii. All rights reserved. | Premium Furniture Store</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+
+        // Load cart count
+        function loadCartCount() {
+            const userId = localStorage.getItem('userId');
+            if (userId) {
+                fetch(`${API_URL}/api/cart/${userId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('cartBadge').textContent = data.data.items.length;
+                        }
+                    })
+                    .catch(err => console.error(err));
+            }
+        }
+
+        // Load products
+        function loadProducts() {
+            fetch(`${API_URL}/api/products`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const featured = data.data.filter(p => p.sale_price).slice(0, 4);
+                        const popular = data.data.slice(0, 8);
+                        displayProducts(featured, 'featuredProducts');
+                        displayProducts(popular, 'allProducts');
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        function displayProducts(products, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = products.map(p => {
+                const price = p.sale_price || p.price;
+                const original = p.sale_price ? p.price : null;
+                const discount = original ? Math.round((1 - price/original) * 100) : 0;
+
+                return `
+                    <div class="product-card">
+                        <div class="product-image-wrapper">
+                            ${discount > 0 ? `<div class="discount-badge">${discount}% OFF</div>` : ''}
+                            <button class="wishlist-btn">♡</button>
+                            <img src="${p.image}" alt="${p.name}" class="product-image">
+                        </div>
+                        <div class="product-info">
+                            <h3 class="product-title">${p.name}</h3>
+                            <p class="product-description">${p.description || ''}</p>
+                            <div class="product-rating">
+                                <span class="stars">★★★★★</span>
+                                <span class="rating-count">(${Math.floor(Math.random() * 500) + 50})</span>
+                            </div>
+                            <div class="product-pricing">
+                                <span class="current-price">₹${parseFloat(price).toLocaleString('en-IN')}</span>
+                                ${original ? `<span class="original-price">₹${parseFloat(original).toLocaleString('en-IN')}</span>` : ''}
+                            </div>
+                            <p class="product-stock">${p.stock_quantity} in stock</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        loadCartCount();
+        loadProducts();
+    </script>
+</body>
+</html>

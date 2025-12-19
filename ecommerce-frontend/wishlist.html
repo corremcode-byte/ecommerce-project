@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Wishlist - Furnii Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🛋️</span>
+                <span class="logo-text">Furnii</span>
+            </a>
+
+            <div class="search-bar">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" placeholder="Search for furniture, decor, and more...">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <!-- Account Dropdown -->
+                <div class="header-dropdown" id="accountDropdown">
+                    <button class="header-link dropdown-trigger" onclick="toggleDropdown('accountDropdown')">
+                        <span>👤</span>
+                        <span id="accountText">Account</span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <div id="loggedOutMenu">
+                            <a href="register.html" class="dropdown-item">Sign Up</a>
+                            <a href="login.html" class="dropdown-item">Sign In</a>
+                        </div>
+                        <div id="loggedInMenu" style="display:none;">
+                            <a href="profile.html" class="dropdown-item">My Profile</a>
+                            <a href="orders.html" class="dropdown-item">My Orders</a>
+                            <div class="dropdown-divider"></div>
+                            <a href="#" class="dropdown-item" onclick="handleLogout(event)">Logout</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wishlist -->
+                <a href="wishlist.html" class="header-link active">
+                    <span>❤️</span>
+                    <span>Wishlist</span>
+                    <span class="cart-badge" id="wishlistCount">0</span>
+                </a>
+
+                <!-- Cart -->
+                <a href="cart.html" class="header-link">
+                    <span>🛒</span>
+                    <span>Cart</span>
+                    <span class="cart-badge" id="cartBadge">0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-content">
+            <a href="index.html">Home</a>
+            <a href="products.html">All Products</a>
+            <a href="products.html?category=seating">Seating</a>
+            <a href="products.html?category=tables">Tables</a>
+            <a href="products.html?category=storage">Storage</a>
+            <a href="wishlist.html" class="active">Wishlist</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="page-hero">
+            <h1 class="page-title">My Wishlist</h1>
+            <p class="page-subtitle">Your favorite products saved for later</p>
+        </div>
+
+        <div id="wishlistGrid" class="products-grid">
+            <p style="text-align:center; padding:40px;">Loading wishlist...</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Furnii. All rights reserved. | Premium Furniture Store</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let currentUser = JSON.parse(localStorage.getItem('user'));
+        let userId = localStorage.getItem('userId');
+        let wishlistItems = [];
+
+        // Check login
+        if (!userId) {
+            showToast('Please login to view your wishlist', 'error');
+            setTimeout(() => window.location.href = 'login.html', 1500);
+        }
+
+        // Initialize
+        function init() {
+            updateHeaderUI();
+            loadCartCount();
+            loadWishlist();
+        }
+
+        // Update header based on login status
+        function updateHeaderUI() {
+            if (currentUser) {
+                document.getElementById('accountText').textContent = currentUser.full_name.split(' ')[0];
+                document.getElementById('loggedOutMenu').style.display = 'none';
+                document.getElementById('loggedInMenu').style.display = 'block';
+            }
+        }
+
+        // Toggle dropdown
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            dropdown.classList.toggle('active');
+            
+            document.querySelectorAll('.header-dropdown').forEach(d => {
+                if (d.id !== id) d.classList.remove('active');
+            });
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.header-dropdown')) {
+                document.querySelectorAll('.header-dropdown').forEach(d => {
+                    d.classList.remove('active');
+                });
+            }
+        });
+
+        // Handle logout
+        function handleLogout(e) {
+            e.preventDefault();
+            localStorage.clear();
+            showToast('Logged out successfully', 'success');
+            setTimeout(() => window.location.href = 'index.html', 1000);
+        }
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Load cart count
+        function loadCartCount() {
+            if (userId) {
+                fetch(`${API_URL}/api/cart/${userId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('cartBadge').textContent = data.data.items.length;
+                        }
+                    })
+                    .catch(err => console.error(err));
+            }
+        }
+
+        // Load wishlist
+        async function loadWishlist() {
+            try {
+                const response = await fetch(`${API_URL}/api/wishlist/${userId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    wishlistItems = data.data;
+                    document.getElementById('wishlistCount').textContent = wishlistItems.length;
+                    displayWishlist(wishlistItems);
+                }
+            } catch (error) {
+                document.getElementById('wishlistGrid').innerHTML = '<p style="text-align:center; color:#ef4444;">Error loading wishlist</p>';
+                console.error('Error:', error);
+            }
+        }
+
+        // Display wishlist
+        function displayWishlist(items) {
+            const container = document.getElementById('wishlistGrid');
+            
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1;" class="empty-state">
+                        <div class="empty-icon">💝</div>
+                        <h3>Your wishlist is empty</h3>
+                        <p>Save your favorite items here for easy access later!</p>
+                        <a href="products.html" class="btn btn-primary">Browse Products</a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = items.map(p => {
+                const price = p.sale_price || p.price;
+                const original = p.sale_price ? p.price : null;
+                const discount = original ? Math.round((1 - price/original) * 100) : 0;
+
+                return `
+                    <div class="product-card">
+                        <div class="product-image-wrapper">
+                            ${discount > 0 ? `<div class="discount-badge">${discount}% OFF</div>` : ''}
+                            <button class="wishlist-btn in-wishlist" onclick="removeFromWishlist(${p.id}, '${p.name.replace(/'/g, "\\'")}', event)">
+                                ❤️
+                            </button>
+                            <img src="${p.image}" alt="${p.name}" class="product-image" onerror="this.src='https://via.placeholder.com/400x400?text=${encodeURIComponent(p.name)}'">
+                        </div>
+                        <div class="product-info">
+                            <h3 class="product-title">${p.name}</h3>
+                            <p class="product-description">${p.description || 'Premium quality furniture piece'}</p>
+                            <div class="product-rating">
+                                <span class="stars">★★★★★</span>
+                                <span class="rating-count">(${Math.floor(Math.random() * 500) + 50})</span>
+                            </div>
+                            <div class="product-pricing">
+                                <span class="current-price">₹${parseFloat(price).toLocaleString('en-IN')}</span>
+                                ${original ? `<span class="original-price">₹${parseFloat(original).toLocaleString('en-IN')}</span>` : ''}
+                            </div>
+                            <p class="product-stock">${p.stock_quantity > 0 ? `${p.stock_quantity} in stock` : 'Out of stock'}</p>
+                            <button class="btn btn-primary btn-full" onclick="moveToCart(${p.product_id}, '${p.name.replace(/'/g, "\\'")}', ${p.id}, event)" ${p.stock_quantity === 0 ? 'disabled' : ''}>
+                                ${p.stock_quantity === 0 ? 'Out of Stock' : 'Move to Cart'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Remove from wishlist
+        async function removeFromWishlist(wishlistId, productName, event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/wishlist/${wishlistId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`${productName} removed from wishlist`, 'success');
+                    loadWishlist();
+                }
+            } catch (error) {
+                showToast('Error removing from wishlist', 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        // Move to cart and remove from wishlist
+        async function moveToCart(productId, productName, wishlistId, event) {
+            event.preventDefault();
+            
+            try {
+                // Add to cart
+                const cartResponse = await fetch(`${API_URL}/api/cart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        product_id: productId,
+                        quantity: 1
+                    })
+                });
+
+                const cartData = await cartResponse.json();
+
+                if (cartData.success) {
+                    // Remove from wishlist
+                    await fetch(`${API_URL}/api/wishlist/${wishlistId}`, {
+                        method: 'DELETE'
+                    });
+
+                    showToast(`${productName} moved to cart!`, 'success');
+                    loadCartCount();
+                    loadWishlist();
+                } else {
+                    showToast(cartData.message || 'Failed to add to cart', 'error');
+                }
+            } catch (error) {
+                showToast('Error moving to cart', 'error');
+                console.error('Error:', error);
+            }
+        }
+
+        // Initialize page
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Furnii Store</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <span class="logo-icon">🛋️</span>
+                <span class="logo-text">Furnii</span>
+            </a>
+
+            <div class="search-bar">
+                <div class="search-wrapper">
+                    <input type="text" class="search-input" placeholder="Search for furniture, decor, and more...">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a href="cart.html" class="header-link">
+                    🛒 Cart
+                    <span class="cart-badge" id="cartBadge">0</span>
+                </a>
+                <a href="orders.html" class="header-link">Orders</a>
+                <a href="#" class="header-link" id="logoutLink">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-content">
+            <a href="index.html">Home</a>
+            <a href="products.html">All Products</a>
+            <a href="profile.html" class="active">My Account</a>
+            <a href="orders.html">My Orders</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-container">
+        <div class="page-hero">
+            <h1 class="page-title">My Account</h1>
+            <p class="page-subtitle">Manage your profile and addresses</p>
+        </div>
+
+        <div id="message" class="message" style="display:none;"></div>
+
+        <div class="profile-layout">
+            <!-- Personal Information -->
+            <div class="profile-card">
+                <div class="card-header">
+                    <h2 class="card-title">Personal Information</h2>
+                    <button onclick="toggleEditProfile()" class="btn btn-secondary">Edit Profile</button>
+                </div>
+                <div id="profileInfo" class="profile-details"></div>
+            </div>
+
+            <!-- Delivery Addresses -->
+            <div class="profile-card">
+                <div class="card-header">
+                    <h2 class="card-title">Delivery Addresses</h2>
+                    <button onclick="showAddAddressForm()" class="btn btn-primary">+ Add New Address</button>
+                </div>
+                <div id="addressesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span onclick="closeEditProfile()" class="modal-close">&times;</span>
+            <h3 class="modal-title">Edit Profile</h3>
+            <form id="editProfileForm">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="edit_full_name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mobile</label>
+                    <input type="tel" id="edit_mobile" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" id="edit_dob" class="form-input" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Address Modal -->
+    <div id="addAddressModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span onclick="closeAddAddress()" class="modal-close">&times;</span>
+            <h3 class="modal-title">Add New Address</h3>
+            <form id="addAddressForm">
+                <div class="form-group">
+                    <label class="form-label">Address Line 1 *</label>
+                    <input type="text" id="address_line1" class="form-input" required placeholder="House/Flat No., Building">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address Line 2</label>
+                    <input type="text" id="address_line2" class="form-input" placeholder="Area, Street">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">City *</label>
+                    <input type="text" id="city" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">State *</label>
+                    <input type="text" id="state" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Postal Code *</label>
+                    <input type="text" id="postal_code" class="form-input" required pattern="[0-9]{6}">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="is_default"> Set as default address
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">Add Address</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 Furnii. All rights reserved. | Premium Furniture Store</p>
+        </div>
+    </footer>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let userId = localStorage.getItem('userId');
+
+        if (!userId) {
+            alert('Please login to view your profile');
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('logoutLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.clear();
+            window.location.href = 'index.html';
+        });
+
+        async function loadProfile() {
+            try {
+                const response = await fetch(`${API_URL}/api/profile/${userId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayProfile(data.data);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function displayProfile(profile) {
+            document.getElementById('profileInfo').innerHTML = `
+                <div class="info-row">
+                    <span class="info-label">Username:</span>
+                    <span class="info-value">${profile.username}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">${profile.email}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Full Name:</span>
+                    <span class="info-value">${profile.full_name}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Mobile:</span>
+                    <span class="info-value">${profile.mobile}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date of Birth:</span>
+                    <span class="info-value">${new Date(profile.date_of_birth).toLocaleDateString()}</span>
+                </div>
+            `;
+
+            displayAddresses(profile.addresses || []);
+        }
+
+        function displayAddresses(addresses) {
+            const list = document.getElementById('addressesList');
+            
+            if (addresses.length === 0) {
+                list.innerHTML = '<p class="empty-text">No addresses added yet.</p>';
+                return;
+            }
+
+            list.innerHTML = addresses.map(addr => `
+                <div class="address-item ${addr.is_default ? 'default-address' : ''}">
+                    ${addr.is_default ? '<span class="default-badge">Default</span>' : ''}
+                    <p class="address-line"><strong>${addr.address_line1}</strong></p>
+                    ${addr.address_line2 ? `<p class="address-line">${addr.address_line2}</p>` : ''}
+                    <p class="address-line">${addr.city}, ${addr.state} - ${addr.postal_code}</p>
+                    <p class="address-line">${addr.country}</p>
+                    <button onclick="deleteAddress(${addr.id})" class="btn btn-remove">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        function toggleEditProfile() {
+            document.getElementById('editProfileModal').style.display = 'flex';
+            const user = JSON.parse(localStorage.getItem('user'));
+            document.getElementById('edit_full_name').value = user.full_name;
+            document.getElementById('edit_mobile').value = user.mobile;
+            document.getElementById('edit_dob').value = user.date_of_birth.split('T')[0];
+        }
+
+        function closeEditProfile() {
+            document.getElementById('editProfileModal').style.display = 'none';
+        }
+
+        document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/profile/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        full_name: document.getElementById('edit_full_name').value,
+                        mobile: document.getElementById('edit_mobile').value,
+                        date_of_birth: document.getElementById('edit_dob').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.setItem('user', JSON.stringify(data.data));
+                    showMessage('✅ Profile updated successfully!', 'success');
+                    closeEditProfile();
+                    loadProfile();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+
+        function showAddAddressForm() {
+            document.getElementById('addAddressModal').style.display = 'flex';
+        }
+
+        function closeAddAddress() {
+            document.getElementById('addAddressModal').style.display = 'none';
+        }
+
+        document.getElementById('addAddressForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                const response = await fetch(`${API_URL}/api/addresses`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        address_line1: document.getElementById('address_line1').value,
+                        address_line2: document.getElementById('address_line2').value,
+                        city: document.getElementById('city').value,
+                        state: document.getElementById('state').value,
+                        postal_code: document.getElementById('postal_code').value,
+                        country: 'India',
+                        is_default: document.getElementById('is_default').checked
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('✅ Address added successfully!', 'success');
+                    closeAddAddress();
+                    document.getElementById('addAddressForm').reset();
+                    loadProfile();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+
+        async function deleteAddress(addressId) {
+            if (!confirm('Delete this address?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/addresses/${addressId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('✅ Address deleted!', 'success');
+                    loadProfile();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        loadProfile();
+    </script>
+</body>
+</html>
