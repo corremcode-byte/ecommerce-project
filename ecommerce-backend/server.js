@@ -636,6 +636,25 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'FURNII Backend API is running!',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth/register, /api/auth/login',
+      vendor: '/api/vendor/register, /api/vendor/login',
+      admin: '/api/admin/login',
+      products: '/api/products',
+      cart: '/api/cart/:userId',
+      wishlist: '/api/wishlist/:userId',
+      orders: '/api/orders/:userId'
+    }
+  });
+});
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Server is running!' });
