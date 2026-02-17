@@ -588,7 +588,17 @@ app.get('/api/categories/:slug', async (req, res) => {
 app.get('/api/products', async (req, res) => {
   try {
     // Ensure database is initialized before querying
-    await ensureInitialized();
+    try {
+      await ensureInitialized();
+    } catch (initError) {
+      console.error('❌ Database initialization failed:', initError);
+      return res.status(500).json({
+        success: false,
+        message: 'Database initialization failed. Please try POST /api/init-db to initialize manually.',
+        error: initError.message,
+        hint: 'The database tables may not exist. Try calling POST /api/init-db first.'
+      });
+    }
     
     const { category, featured, limit } = req.query;
     
@@ -795,7 +805,7 @@ const initializeDatabase = async () => {
   try {
     console.log('🔄 Initializing database...');
     
-    // Create all tables
+    // Create tables WITHOUT foreign keys first (to avoid dependency issues)
     await db.query(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -809,22 +819,7 @@ const initializeDatabase = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
-
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS addresses (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        address_line1 VARCHAR(255) NOT NULL,
-        address_line2 VARCHAR(255),
-        city VARCHAR(100) NOT NULL,
-        state VARCHAR(100) NOT NULL,
-        postal_code VARCHAR(20) NOT NULL,
-        country VARCHAR(100) NOT NULL DEFAULT 'India',
-        is_default BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
+    console.log('✅ Created users table');
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS categories (
@@ -833,10 +828,10 @@ const initializeDatabase = async () => {
         slug VARCHAR(255) NOT NULL UNIQUE,
         image VARCHAR(500),
         parent_id INT DEFAULT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    console.log('✅ Created categories table');
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS vendors (
@@ -856,6 +851,7 @@ const initializeDatabase = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+    console.log('✅ Created vendors table');
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS admins (
@@ -866,6 +862,7 @@ const initializeDatabase = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    console.log('✅ Created admins table');
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS products (
@@ -880,11 +877,57 @@ const initializeDatabase = async () => {
         stock_quantity INT DEFAULT 0,
         is_featured BOOLEAN DEFAULT FALSE,
         vendor_id INT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
-        FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    console.log('✅ Created products table');
+
+    // Now add foreign keys
+    try {
+      await db.query('ALTER TABLE categories ADD CONSTRAINT fk_categories_parent FOREIGN KEY (parent_id) REFERENCES categories(id) ON DELETE SET NULL');
+    } catch (e) {
+      // Foreign key might already exist
+    }
+
+    try {
+      await db.query('ALTER TABLE products ADD CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL');
+    } catch (e) {
+      // Foreign key might already exist
+    }
+
+    try {
+      await db.query('ALTER TABLE products ADD CONSTRAINT fk_products_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL');
+    } catch (e) {
+      // Foreign key might already exist or vendor_id column doesn't exist yet
+      try {
+        await db.query('ALTER TABLE products ADD COLUMN vendor_id INT');
+        await db.query('ALTER TABLE products ADD CONSTRAINT fk_products_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL');
+      } catch (e2) {
+        // Already exists
+      }
+    }
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS addresses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        address_line1 VARCHAR(255) NOT NULL,
+        address_line2 VARCHAR(255),
+        city VARCHAR(100) NOT NULL,
+        state VARCHAR(100) NOT NULL,
+        postal_code VARCHAR(20) NOT NULL,
+        country VARCHAR(100) NOT NULL DEFAULT 'India',
+        is_default BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Created addresses table');
+
+    try {
+      await db.query('ALTER TABLE addresses ADD CONSTRAINT fk_addresses_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE');
+    } catch (e) {
+      // Foreign key might already exist
+    }
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS cart (
@@ -894,11 +937,17 @@ const initializeDatabase = async () => {
         quantity INT NOT NULL DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
         UNIQUE KEY user_product (user_id, product_id)
       )
     `);
+    console.log('✅ Created cart table');
+
+    try {
+      await db.query('ALTER TABLE cart ADD CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE');
+      await db.query('ALTER TABLE cart ADD CONSTRAINT fk_cart_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE');
+    } catch (e) {
+      // Foreign keys might already exist
+    }
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS wishlist (
@@ -906,11 +955,17 @@ const initializeDatabase = async () => {
         user_id INT NOT NULL,
         product_id INT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
         UNIQUE KEY user_product (user_id, product_id)
       )
     `);
+    console.log('✅ Created wishlist table');
+
+    try {
+      await db.query('ALTER TABLE wishlist ADD CONSTRAINT fk_wishlist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE');
+      await db.query('ALTER TABLE wishlist ADD CONSTRAINT fk_wishlist_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE');
+    } catch (e) {
+      // Foreign keys might already exist
+    }
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS orders (
@@ -923,11 +978,17 @@ const initializeDatabase = async () => {
         payment_status VARCHAR(50) DEFAULT 'Pending',
         shipping_address_id INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (shipping_address_id) REFERENCES addresses(id) ON DELETE SET NULL
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+    console.log('✅ Created orders table');
+
+    try {
+      await db.query('ALTER TABLE orders ADD CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE');
+      await db.query('ALTER TABLE orders ADD CONSTRAINT fk_orders_address FOREIGN KEY (shipping_address_id) REFERENCES addresses(id) ON DELETE SET NULL');
+    } catch (e) {
+      // Foreign keys might already exist
+    }
 
     await db.query(`
       CREATE TABLE IF NOT EXISTS order_items (
@@ -936,21 +997,19 @@ const initializeDatabase = async () => {
         product_id INT NOT NULL,
         quantity INT NOT NULL,
         price DECIMAL(10, 2) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    console.log('✅ Created order_items table');
 
-    // Add vendor_id column if it doesn't exist
     try {
-      await db.query('ALTER TABLE products ADD COLUMN vendor_id INT');
-      await db.query('ALTER TABLE products ADD FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL');
+      await db.query('ALTER TABLE order_items ADD CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE');
+      await db.query('ALTER TABLE order_items ADD CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE');
     } catch (e) {
-      // Column already exists — that's fine
+      // Foreign keys might already exist
     }
 
-    console.log('✅ Tables created/verified');
+    console.log('✅ All tables created/verified');
 
     // Insert sample data
     const categories = [
@@ -994,23 +1053,47 @@ const initializeDatabase = async () => {
     );
 
     console.log('✅ Database initialized with sample data');
+    return { success: true, message: 'Database initialized successfully' };
   } catch (error) {
-    console.error('❌ Database initialization error:', error.message);
-    // Don't throw - allow server to start even if init fails
+    console.error('❌ Database initialization error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage
+    });
+    // Re-throw so we can see the error
+    throw error;
   }
 };
 
 // Run initialization (will run on first request in Vercel, or on startup locally)
 let initPromise = null;
+let initError = null;
 const ensureInitialized = async () => {
-  if (!initPromise) {
-    initPromise = initializeDatabase();
+  if (!initPromise && !initError) {
+    initPromise = initializeDatabase().catch(err => {
+      initError = err;
+      console.error('❌ Initialization failed, will retry on next request');
+      throw err;
+    });
+  }
+  if (initError) {
+    // Retry initialization if it failed before
+    initError = null;
+    initPromise = initializeDatabase().catch(err => {
+      initError = err;
+      throw err;
+    });
   }
   return initPromise;
 };
 
 // Initialize on module load (for Vercel serverless, this runs on first cold start)
-ensureInitialized();
+ensureInitialized().catch(err => {
+  console.error('Initial initialization failed, will retry on first request');
+});
 
 // ============================================
 // START SERVER
