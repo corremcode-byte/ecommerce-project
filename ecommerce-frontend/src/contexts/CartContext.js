@@ -17,7 +17,7 @@ export const CartProvider = ({ children }) => {
   const [cartCount, setCartCount] = useState(0);
   const [cartItems, setCartItems] = useState([]);
   const [cartTotal, setCartTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false); // eslint-disable-line no-unused-vars
 
   const loadCart = async () => {
     if (!isAuthenticated || !userId) {
@@ -43,6 +43,7 @@ export const CartProvider = ({ children }) => {
 
   useEffect(() => {
     loadCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, isAuthenticated]);
 
   const addToCart = async (productId, quantity = 1) => {

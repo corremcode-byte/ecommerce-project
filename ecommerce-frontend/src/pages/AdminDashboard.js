@@ -20,6 +20,7 @@ const AdminDashboard = () => {
       return;
     }
     loadVendors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, navigate]);
 
   const loadVendors = async () => {

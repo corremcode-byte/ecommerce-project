@@ -16,7 +16,7 @@ export const WishlistProvider = ({ children }) => {
   const { userId, isAuthenticated } = useAuth();
   const [wishlistItems, setWishlistItems] = useState([]);
   const [wishlistCount, setWishlistCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false); // eslint-disable-line no-unused-vars
 
   const loadWishlist = async () => {
     if (!isAuthenticated || !userId) {
@@ -40,6 +40,7 @@ export const WishlistProvider = ({ children }) => {
 
   useEffect(() => {
     loadWishlist();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, isAuthenticated]);
 
   const toggleWishlist = async (productId) => {

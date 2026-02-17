@@ -17,13 +17,14 @@ const AnimatedCard = ({ children, className = '', delay = 0, ...props }) => {
       { threshold: 0.1 }
     );
 
-    if (cardRef.current) {
-      observer.observe(cardRef.current);
+    const node = cardRef.current;
+    if (node) {
+      observer.observe(node);
     }
 
     return () => {
-      if (cardRef.current) {
-        observer.unobserve(cardRef.current);
+      if (node) {
+        observer.unobserve(node);
       }
     };
   }, [delay]);
