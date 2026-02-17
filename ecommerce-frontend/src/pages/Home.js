@@ -18,7 +18,15 @@ const Home = () => {
 
   const loadProducts = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/products`);
+      const url = `${API_URL}/api/products`;
+      console.log('Fetching products from:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
 
       if (data.success) {
@@ -26,9 +34,16 @@ const Home = () => {
         const popular = data.data.slice(0, 8);
         setFeaturedProducts(featured);
         setPopularProducts(popular);
+      } else {
+        console.error('API returned error:', data.message);
       }
     } catch (error) {
       console.error('Error loading products:', error);
+      console.error('API_URL:', API_URL);
+      console.error('Full error details:', {
+        message: error.message,
+        stack: error.stack
+      });
     } finally {
       setLoading(false);
     }

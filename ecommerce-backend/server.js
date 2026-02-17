@@ -6,14 +6,35 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Handle preflight OPTIONS requests first
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
+
 // Middleware - CORS Configuration
 // Allow all origins for now (restrict in production if needed)
 app.use(cors({
-  origin: true, // Allow all origins
+  origin: '*', // Explicitly allow all origins
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Add CORS headers manually as backup
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
 app.use(express.json());
 
 // Error handling middleware
@@ -659,6 +680,7 @@ app.get('/api/search', async (req, res) => {
 
 // Root route
 app.get('/', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
   res.json({ 
     success: true, 
     message: 'FURNII Backend API is running!',
@@ -673,6 +695,17 @@ app.get('/', (req, res) => {
       wishlist: '/api/wishlist/:userId',
       orders: '/api/orders/:userId'
     }
+  });
+});
+
+// Simple CORS test endpoint
+app.get('/api/cors-test', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.json({ 
+    success: true, 
+    message: 'CORS is working!',
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString()
   });
 });
 
