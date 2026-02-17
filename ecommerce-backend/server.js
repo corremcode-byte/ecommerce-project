@@ -596,7 +596,12 @@ app.get('/api/products', async (req, res) => {
     const [products] = await db.query(query, params);
     res.json({ success: true, data: products });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Error fetching products:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -658,6 +663,36 @@ app.get('/', (req, res) => {
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({ success: true, message: 'Server is running!' });
+});
+
+// Database connectivity test
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const [result] = await db.query('SELECT 1 as test');
+    res.json({ 
+      success: true, 
+      message: 'Database connection successful',
+      dbConfig: {
+        host: process.env.DB_HOST ? '***configured***' : 'missing',
+        user: process.env.DB_USER ? '***configured***' : 'missing',
+        database: process.env.DB_NAME ? '***configured***' : 'missing',
+        password: process.env.DB_PASSWORD ? '***configured***' : 'missing'
+      }
+    });
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Database connection failed',
+      error: error.message,
+      dbConfig: {
+        host: process.env.DB_HOST || 'NOT SET',
+        user: process.env.DB_USER || 'NOT SET',
+        database: process.env.DB_NAME || 'NOT SET',
+        password: process.env.DB_PASSWORD ? 'SET' : 'NOT SET'
+      }
+    });
+  }
 });
 
 // ============================================
