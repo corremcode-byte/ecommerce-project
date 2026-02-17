@@ -32,6 +32,7 @@ const Checkout = () => {
     }
 
     loadCheckoutData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, navigate, showToast, cartItems.length, loadCart]);
 
   const loadCheckoutData = async () => {

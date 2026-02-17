@@ -42,6 +42,7 @@ const VendorDashboard = () => {
       console.error('Error parsing vendor data:', error);
       navigate('/vendor-login');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const loadCategories = async () => {

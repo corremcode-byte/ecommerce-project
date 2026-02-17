@@ -28,6 +28,7 @@ const Wishlist = () => {
       setProducts([]);
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wishlistItems]);
 
   const loadProducts = async () => {
