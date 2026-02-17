@@ -25,6 +25,16 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('❌ Unhandled error:', err);
+  res.status(500).json({
+    success: false,
+    message: err.message || 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
 // Password helper functions
 const hashPassword = (password) => Buffer.from(password).toString('base64');
 const verifyPassword = (password, hash) => Buffer.from(password).toString('base64') === hash;
@@ -566,15 +576,19 @@ app.get('/api/categories/:slug', async (req, res) => {
 app.get('/api/products', async (req, res) => {
   try {
     const { category, featured, limit } = req.query;
+    
+    // Base query - try with vendor join first, fallback to simple query
     let query = 'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1';
     const params = [];
     
-    // Try vendor join — safe fallback if column doesn't exist yet
+    // Check if vendor_id column exists and add vendor join if it does
     try {
-      const [testVendor] = await db.query('SELECT vendor_id FROM products LIMIT 1');
+      await db.query('SELECT vendor_id FROM products LIMIT 1');
+      // Column exists, use query with vendor join
       query = 'SELECT p.*, c.name as category_name, v.business_name as vendor_name FROM products p LEFT JOIN categories c ON p.category_id = c.id LEFT JOIN vendors v ON p.vendor_id = v.id WHERE 1=1';
     } catch (e) {
-      // vendor_id column doesn't exist yet, use simple query
+      // vendor_id column doesn't exist, use simple query (already set above)
+      console.log('Using simple query (vendor_id column not found)');
     }
     
     if (category) {
@@ -594,13 +608,24 @@ app.get('/api/products', async (req, res) => {
     }
     
     const [products] = await db.query(query, params);
-    res.json({ success: true, data: products });
+    res.json({ success: true, data: products || [] });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error('❌ Error fetching products:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState
+    });
     res.status(500).json({ 
       success: false, 
-      message: error.message,
-      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      message: 'Failed to fetch products',
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? {
+        code: error.code,
+        errno: error.errno,
+        sqlState: error.sqlState
+      } : undefined
     });
   }
 });
@@ -676,7 +701,8 @@ app.get('/api/test-db', async (req, res) => {
         host: process.env.DB_HOST ? '***configured***' : 'missing',
         user: process.env.DB_USER ? '***configured***' : 'missing',
         database: process.env.DB_NAME ? '***configured***' : 'missing',
-        password: process.env.DB_PASSWORD ? '***configured***' : 'missing'
+        password: process.env.DB_PASSWORD ? '***configured***' : 'missing',
+        ssl: process.env.DB_SSL || 'not set'
       }
     });
   } catch (error) {
@@ -685,12 +711,34 @@ app.get('/api/test-db', async (req, res) => {
       success: false, 
       message: 'Database connection failed',
       error: error.message,
+      errorCode: error.code,
       dbConfig: {
         host: process.env.DB_HOST || 'NOT SET',
         user: process.env.DB_USER || 'NOT SET',
         database: process.env.DB_NAME || 'NOT SET',
-        password: process.env.DB_PASSWORD ? 'SET' : 'NOT SET'
+        password: process.env.DB_PASSWORD ? 'SET' : 'NOT SET',
+        ssl: process.env.DB_SSL || 'NOT SET'
       }
+    });
+  }
+});
+
+// Simple products test (minimal query)
+app.get('/api/products-test', async (req, res) => {
+  try {
+    const [products] = await db.query('SELECT COUNT(*) as count FROM products');
+    res.json({ 
+      success: true, 
+      message: 'Products table accessible',
+      productCount: products[0]?.count || 0
+    });
+  } catch (error) {
+    console.error('Products test error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Products table query failed',
+      error: error.message,
+      errorCode: error.code
     });
   }
 });
