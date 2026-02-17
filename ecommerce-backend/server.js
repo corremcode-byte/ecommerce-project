@@ -6,13 +6,15 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Handle preflight OPTIONS requests first
+// Handle preflight OPTIONS requests first - MUST be before CORS middleware
 app.options('*', (req, res) => {
+  console.log('OPTIONS preflight request received:', req.path);
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(200);
+  res.header('Access-Control-Max-Age', '86400');
+  res.status(200).end();
 });
 
 // Middleware - CORS Configuration
@@ -26,18 +28,28 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
+// Request logging middleware (for debugging)
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`, {
+    origin: req.headers.origin,
+    'user-agent': req.headers['user-agent']?.substring(0, 50)
+  });
+  next();
+});
+
 // Add CORS headers manually as backup - MUST be before any routes
 app.use((req, res, next) => {
-  // Always set CORS headers
+  // Always set CORS headers on every response
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400'); // 24 hours
   
-  // Handle preflight
+  // Handle preflight explicitly
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    console.log('Handling OPTIONS preflight for:', req.path);
+    return res.status(200).end();
   }
   
   next();
