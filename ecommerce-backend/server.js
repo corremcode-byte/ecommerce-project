@@ -26,12 +26,20 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-// Add CORS headers manually as backup
+// Add CORS headers manually as backup - MUST be before any routes
 app.use((req, res, next) => {
+  // Always set CORS headers
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
   res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
   next();
 });
 
@@ -633,6 +641,9 @@ app.get('/api/products', async (req, res) => {
     }
     
     const [products] = await db.query(query, params);
+    
+    // Explicitly set CORS headers
+    res.header('Access-Control-Allow-Origin', '*');
     res.json({ success: true, data: products || [] });
   } catch (error) {
     console.error('❌ Error fetching products:', error);
@@ -708,6 +719,19 @@ app.get('/', (req, res) => {
       wishlist: '/api/wishlist/:userId',
       orders: '/api/orders/:userId'
     }
+  });
+});
+
+// Simple ping endpoint (no DB required)
+app.get('/api/ping', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.json({ 
+    success: true, 
+    message: 'Backend is alive!',
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin || 'none',
+    method: req.method,
+    path: req.path
   });
 });
 

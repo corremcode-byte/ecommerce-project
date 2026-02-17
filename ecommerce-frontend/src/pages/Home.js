@@ -20,14 +20,28 @@ const Home = () => {
     try {
       const url = `${API_URL}/api/products`;
       console.log('Fetching products from:', url);
+      console.log('API_URL:', API_URL);
       
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Response error body:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
       
       const data = await response.json();
+      console.log('Received data:', data);
 
       if (data.success) {
         const featured = data.data.filter(p => p.sale_price).slice(0, 4);
@@ -39,11 +53,20 @@ const Home = () => {
       }
     } catch (error) {
       console.error('Error loading products:', error);
-      console.error('API_URL:', API_URL);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
       console.error('Full error details:', {
         message: error.message,
-        stack: error.stack
+        name: error.name,
+        stack: error.stack,
+        cause: error.cause
       });
+      
+      // Show user-friendly error
+      if (error.message.includes('Failed to fetch')) {
+        console.error('⚠️ Network error - Backend might be down or CORS issue');
+        console.error('Try visiting:', `${API_URL}/api/health`);
+      }
     } finally {
       setLoading(false);
     }

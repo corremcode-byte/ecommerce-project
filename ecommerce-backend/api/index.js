@@ -2,5 +2,5 @@
 // Import the Express app from server.js
 const app = require('../server.js');
 
-// Export the app for Vercel
+// Export the app directly - Vercel will handle it
 module.exports = app;
