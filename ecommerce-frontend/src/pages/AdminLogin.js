@@ -1,44 +1,52 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 
 import { API_URL } from '../config';
 
-const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const AdminLogin = () => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-  const { login } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage({ text: 'Signing in...', type: 'info' });
+    setMessage({ text: 'Authenticating...', type: 'info' });
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/api/admin/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify(formData)
       });
 
       const data = await response.json();
 
       if (data.success) {
-        login(data.data);
-        showToast('Welcome back! ✨', 'success');
-        setTimeout(() => navigate('/products'), 1000);
+        localStorage.setItem('admin', JSON.stringify(data.data));
+        localStorage.setItem('adminId', data.data.id);
+        showToast('Admin access granted ✨', 'success');
+        setTimeout(() => navigate('/admin-dashboard'), 1000);
       } else {
         setMessage({ text: data.message || 'Login failed', type: 'error' });
         showToast(data.message || 'Login failed', 'error');
       }
     } catch (error) {
       setMessage({
-        text: 'Unable to connect to server. Please check if backend is running.',
+        text: 'Unable to connect to server.',
         type: 'error'
       });
       showToast('Error connecting to server', 'error');
@@ -51,10 +59,10 @@ const Login = () => {
     <div className="form-page">
       <div className="form-container">
         <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '48px' }}>✦</span>
+          <span style={{ fontSize: '48px' }}>🔒</span>
         </div>
-        <h2 className="form-title" style={{ textAlign: 'center' }}>Welcome Back</h2>
-        <p className="form-subtitle" style={{ textAlign: 'center' }}>Sign in to your account</p>
+        <h2 className="form-title" style={{ textAlign: 'center' }}>Admin Portal</h2>
+        <p className="form-subtitle" style={{ textAlign: 'center' }}>Authorized personnel only</p>
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -62,11 +70,12 @@ const Login = () => {
             <input
               type="email"
               id="email"
+              name="email"
               className="form-input"
               required
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@mail.com"
+              value={formData.email}
+              onChange={handleChange}
               autoComplete="email"
             />
           </div>
@@ -76,11 +85,12 @@ const Login = () => {
             <input
               type="password"
               id="password"
+              name="password"
               className="form-input"
               required
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter admin password"
+              value={formData.password}
+              onChange={handleChange}
               autoComplete="current-password"
             />
           </div>
@@ -95,20 +105,20 @@ const Login = () => {
             {loading ? (
               <>
                 <span className="loading-spinner" />
-                Signing in...
+                Verifying...
               </>
             ) : (
-              'Sign In'
+              'Access Dashboard'
             )}
           </button>
         </form>
 
         <p className="form-footer">
-          Don't have an account? <Link to="/register">Create one</Link>
+          <Link to="/">← Back to Home</Link>
         </p>
       </div>
     </div>
   );
 };
 
-export default Login;
+export default AdminLogin;

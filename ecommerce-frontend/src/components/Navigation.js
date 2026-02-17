@@ -5,43 +5,31 @@ const Navigation = () => {
   const location = useLocation();
 
   const isActive = (path) => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname.startsWith(path);
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path) || location.search.includes(path.split('=')[1] || '');
   };
+
+  const navItems = [
+    { path: '/', label: 'Home' },
+    { path: '/products', label: 'All Products' },
+    { path: '/products?category=seating', label: 'Seating' },
+    { path: '/products?category=tables', label: 'Tables' },
+    { path: '/products?category=storage', label: 'Storage' },
+    { path: '/products?category=bedroom', label: 'Bedroom' },
+  ];
 
   return (
     <nav>
       <div className="nav-content">
-        <Link to="/" className={isActive('/') && location.pathname === '/' ? 'active' : ''}>
-          Home
-        </Link>
-        <Link to="/products" className={isActive('/products') ? 'active' : ''}>
-          All Products
-        </Link>
-        <Link to="/products?category=seating" className={location.search.includes('category=seating') ? 'active' : ''}>
-          Seating
-        </Link>
-        <Link to="/products?category=tables" className={location.search.includes('category=tables') ? 'active' : ''}>
-          Tables
-        </Link>
-        <Link to="/products?category=storage" className={location.search.includes('category=storage') ? 'active' : ''}>
-          Storage
-        </Link>
-        <Link to="/products?category=bedroom" className={location.search.includes('category=bedroom') ? 'active' : ''}>
-          Bedroom
-        </Link>
-        {isActive('/products') && (
-          <Link to="/#deals" className={location.hash === '#deals' ? 'active' : ''}>
-            Deals
+        {navItems.map(item => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={isActive(item.path) && (item.path === '/' ? location.pathname === '/' : true) ? 'active' : ''}
+          >
+            {item.label}
           </Link>
-        )}
-        {isActive('/profile') && (
-          <Link to="/profile" className="active">
-            My Account
-          </Link>
-        )}
+        ))}
       </div>
     </nav>
   );

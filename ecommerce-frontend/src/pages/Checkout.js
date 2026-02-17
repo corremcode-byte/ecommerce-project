@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useToast } from '../components/Toast';
 
-const API_URL = 'http://localhost:5001';
+import { API_URL } from '../config';
 
 const Checkout = () => {
   const { userId, isAuthenticated } = useAuth();

@@ -9,7 +9,7 @@ const PromotionalBanner = () => {
     <div className="promotional-banner">
       <div className="promotional-content">
         <span className="promotional-text">
-          SUBSCRIBE & SAVE 20% + FREE DELIVERY OVER ₹10,000
+          ✦ SUBSCRIBE & SAVE 20% + FREE DELIVERY OVER ₹10,000 ✦
         </span>
         <button 
           className="promotional-close" 

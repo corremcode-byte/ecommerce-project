@@ -2,25 +2,62 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
-import { useWishlist } from '../contexts/WishlistContext';
+import { useTheme } from '../contexts/ThemeContext';
 import PromotionalBanner from './PromotionalBanner';
 
 const Header = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const { cartCount } = useCart();
+  const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // Close dropdown when clicking outside
+  // Detect vendor & admin sessions from localStorage
+  const [vendorSession, setVendorSession] = useState(null);
+  const [adminSession, setAdminSession] = useState(null);
+
+  useEffect(() => {
+    const checkSessions = () => {
+      try {
+        const v = localStorage.getItem('vendor');
+        const a = localStorage.getItem('admin');
+        setVendorSession(v ? JSON.parse(v) : null);
+        setAdminSession(a ? JSON.parse(a) : null);
+      } catch (e) {
+        setVendorSession(null);
+        setAdminSession(null);
+      }
+    };
+
+    checkSessions();
+
+    // Listen for storage changes (e.g. login/logout in another tab or within the app)
+    window.addEventListener('storage', checkSessions);
+
+    // Also poll periodically for same-tab changes
+    const interval = setInterval(checkSessions, 1000);
+
+    return () => {
+      window.removeEventListener('storage', checkSessions);
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -34,119 +71,268 @@ const Header = () => {
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch(e);
-    }
-  };
-
-  const handleSearchClick = (e) => {
-    e?.preventDefault();
-    navigate('/products');
-  };
-
   const handleLogout = () => {
     logout();
     setDropdownOpen(false);
     navigate('/');
   };
 
+  const handleVendorLogout = () => {
+    localStorage.removeItem('vendor');
+    localStorage.removeItem('vendorId');
+    setVendorSession(null);
+    setDropdownOpen(false);
+    navigate('/');
+  };
+
+  const handleAdminLogout = () => {
+    localStorage.removeItem('admin');
+    localStorage.removeItem('adminId');
+    setAdminSession(null);
+    setDropdownOpen(false);
+    navigate('/');
+  };
+
+  // Determine what role is active for the dropdown display
+  const hasAnySession = isAuthenticated || vendorSession || adminSession;
+
   return (
     <>
       <PromotionalBanner />
-      <header>
+      <header style={{ 
+        background: scrolled ? 'var(--header-bg-scroll)' : 'var(--header-bg)',
+        boxShadow: scrolled ? 'var(--header-shadow)' : 'none'
+      }}>
         <div className="header-content">
-        <Link to="/" className="logo" aria-label="Furnii Home">
-          <span className="logo-icon" aria-hidden="true">🛋️</span>
-          <span className="logo-text">Furnii</span>
-        </Link>
+          <Link to="/" className="logo" aria-label="Furnii Home">
+            <span className="logo-icon" aria-hidden="true">✦</span>
+            <span className="logo-text">FURNII</span>
+          </Link>
 
-        <div className="search-bar">
-          <form onSubmit={handleSearch} className="search-wrapper">
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Search for furniture, decor, and more..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              aria-label="Search products"
-            />
-            <button
-              type="submit"
-              className="search-icon-btn"
-              aria-label="Search"
-            >
-              🔍
-            </button>
-          </form>
-        </div>
-
-        <div className="header-actions">
-          <button
-            className="header-icon-btn"
-            onClick={handleSearchClick}
-            aria-label="Search"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="9" cy="9" r="6"/>
-              <path d="m17 17-4-4"/>
-            </svg>
-          </button>
-          
-          <div className="header-dropdown" ref={dropdownRef}>
-            <button
-              className="header-icon-btn dropdown-trigger"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              aria-expanded={dropdownOpen}
-              aria-haspopup="true"
-              aria-label="Account menu"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-                <path d="M10 14c-4 0-7.5 2-7.5 4.5V20h15v-1.5c0-2.5-3.5-4.5-7.5-4.5z"/>
-              </svg>
-            </button>
-            <div className={`dropdown-menu ${dropdownOpen ? 'active' : ''}`}>
-              {!isAuthenticated ? (
-                <>
-                  <Link to="/register" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                    Sign Up
-                  </Link>
-                  <Link to="/login" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                    Sign In
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link to="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                    My Profile
-                  </Link>
-                  <Link to="/orders" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                    My Orders
-                  </Link>
-                  <div className="dropdown-divider"></div>
-                  <button className="dropdown-item" onClick={handleLogout}>
-                    Logout
-                  </button>
-                </>
-              )}
-            </div>
+          <div className="search-bar">
+            <form onSubmit={handleSearch} className="search-wrapper">
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search for furniture, decor..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search products"
+              />
+              <button type="submit" className="search-icon-btn" aria-label="Search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                  <circle cx="11" cy="11" r="7"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
+              </button>
+            </form>
           </div>
 
-          <Link to="/cart" className="header-icon-btn header-cart-btn" aria-label={`Shopping cart, ${cartCount} items`}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 3h2l.5 2M7 3h10l-2 10H5L3 3zm0 0v2m0 0h14M5 15h14M5 15a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm14 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
-            </svg>
-            {cartCount > 0 && (
-              <span className="cart-badge-icon" aria-label={`${cartCount} items in cart`}>
-                {cartCount}
-              </span>
-            )}
-          </Link>
+          <div className="header-actions">
+            {/* Theme Toggle */}
+            <button
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {/* Sun Icon */}
+              <svg className="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              </svg>
+              {/* Moon Icon */}
+              <svg className="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            </button>
+
+            <Link to="/wishlist" className="header-icon-btn" aria-label="Wishlist">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </Link>
+
+            <div className="header-dropdown" ref={dropdownRef}>
+              <button
+                className="header-icon-btn dropdown-trigger"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                aria-expanded={dropdownOpen}
+                aria-haspopup="true"
+                aria-label="Account menu"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                {/* Show a small indicator dot if any session is active */}
+                {hasAnySession && (
+                  <span style={{
+                    position: 'absolute',
+                    bottom: 2,
+                    right: 2,
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: 'var(--neon-green)',
+                    border: '2px solid var(--bg-primary)'
+                  }} />
+                )}
+              </button>
+              <div className={`dropdown-menu ${dropdownOpen ? 'active' : ''}`}>
+
+                {/* ═══ CUSTOMER SESSION ═══ */}
+                {isAuthenticated && (
+                  <>
+                    <div style={{ 
+                      padding: '12px 16px', 
+                      color: 'var(--text-muted)', 
+                      fontSize: '11px', 
+                      letterSpacing: '2px',
+                      textTransform: 'uppercase',
+                      fontFamily: 'Space Grotesk, monospace',
+                      borderBottom: '1px solid var(--glass-border)'
+                    }}>
+                      👤 {user?.full_name?.split(' ')[0] || 'Customer'}
+                    </div>
+                    <Link to="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      My Profile
+                    </Link>
+                    <Link to="/orders" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      My Orders
+                    </Link>
+                    <Link to="/wishlist" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      Wishlist
+                    </Link>
+                    <button className="dropdown-item" onClick={handleLogout} style={{ color: 'var(--danger)' }}>
+                      Logout (Customer)
+                    </button>
+                  </>
+                )}
+
+                {/* ═══ VENDOR SESSION ═══ */}
+                {vendorSession && (
+                  <>
+                    {isAuthenticated && <div className="dropdown-divider" />}
+                    <div style={{ 
+                      padding: '12px 16px', 
+                      color: 'var(--neon-green)', 
+                      fontSize: '11px', 
+                      letterSpacing: '2px',
+                      textTransform: 'uppercase',
+                      fontFamily: 'Space Grotesk, monospace',
+                      borderBottom: '1px solid var(--glass-border)'
+                    }}>
+                      🏪 Vendor: {vendorSession.business_name}
+                    </div>
+                    <Link to="/vendor-dashboard" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      📦 Vendor Dashboard
+                    </Link>
+                    <button className="dropdown-item" onClick={handleVendorLogout} style={{ color: 'var(--danger)' }}>
+                      Logout (Vendor)
+                    </button>
+                  </>
+                )}
+
+                {/* ═══ ADMIN SESSION ═══ */}
+                {adminSession && (
+                  <>
+                    {(isAuthenticated || vendorSession) && <div className="dropdown-divider" />}
+                    <div style={{ 
+                      padding: '12px 16px', 
+                      color: 'var(--neon-orange)', 
+                      fontSize: '11px', 
+                      letterSpacing: '2px',
+                      textTransform: 'uppercase',
+                      fontFamily: 'Space Grotesk, monospace',
+                      borderBottom: '1px solid var(--glass-border)'
+                    }}>
+                      🔒 Admin: {adminSession.email}
+                    </div>
+                    <Link to="/admin-dashboard" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      ⚡ Admin Dashboard
+                    </Link>
+                    <button className="dropdown-item" onClick={handleAdminLogout} style={{ color: 'var(--danger)' }}>
+                      Logout (Admin)
+                    </button>
+                  </>
+                )}
+
+                {/* ═══ NO SESSION — Show login options ═══ */}
+                {!hasAnySession && (
+                  <>
+                    <Link to="/login" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      ⚡ Sign In
+                    </Link>
+                    <Link to="/register" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      ✨ Create Account
+                    </Link>
+                    <div className="dropdown-divider" />
+                    <Link to="/vendor-register" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      🏪 Become a Vendor
+                    </Link>
+                    <Link to="/vendor-login" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      📦 Vendor Portal
+                    </Link>
+                    <div className="dropdown-divider" />
+                    <Link to="/admin-login" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                      🔒 Admin
+                    </Link>
+                  </>
+                )}
+
+                {/* ═══ EXTRA LOGIN OPTIONS if some sessions missing ═══ */}
+                {hasAnySession && (!isAuthenticated || !vendorSession || !adminSession) && (
+                  <>
+                    <div className="dropdown-divider" />
+                    <div style={{ 
+                      padding: '8px 16px', 
+                      color: 'var(--text-muted)', 
+                      fontSize: '10px', 
+                      letterSpacing: '2px',
+                      textTransform: 'uppercase',
+                      fontFamily: 'Space Grotesk, monospace'
+                    }}>
+                      Switch / Add Account
+                    </div>
+                    {!isAuthenticated && (
+                      <Link to="/login" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                        👤 Sign In as Customer
+                      </Link>
+                    )}
+                    {!vendorSession && (
+                      <Link to="/vendor-login" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                        🏪 Sign In as Vendor
+                      </Link>
+                    )}
+                    {!adminSession && (
+                      <Link to="/admin-login" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                        🔒 Sign In as Admin
+                      </Link>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            <Link to="/cart" className="header-icon-btn header-cart-btn" aria-label={`Cart, ${cartCount} items`}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+              </svg>
+              {cartCount > 0 && (
+                <span className="cart-badge-icon">{cartCount}</span>
+              )}
+            </Link>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
     </>
   );
 };

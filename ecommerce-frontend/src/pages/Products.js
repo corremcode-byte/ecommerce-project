@@ -4,7 +4,7 @@ import ProductCard from '../components/ProductCard';
 import AnimatedCard from '../components/AnimatedCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-const API_URL = 'http://localhost:5001';
+import { API_URL } from '../config';
 
 const Products = () => {
   const [searchParams] = useSearchParams();
@@ -15,15 +15,20 @@ const Products = () => {
 
   useEffect(() => {
     loadProducts();
-  }, [searchParams]);
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/api/products`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
 
-      if (data.success) {
+      if (data.success && data.data) {
         let filtered = data.data;
         const category = searchParams.get('category');
         const search = searchParams.get('search');
@@ -62,9 +67,12 @@ const Products = () => {
         }
 
         setProducts(filtered);
+      } else {
+        setProducts([]);
       }
     } catch (error) {
       console.error('Error loading products:', error);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -78,22 +86,22 @@ const Products = () => {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '80px' }}>
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>
           <LoadingSpinner size="large" />
-          <p style={{ marginTop: '24px', color: '#64748b', fontWeight: 500, fontSize: '18px' }}>
-            Discovering amazing products...
+          <p style={{ marginTop: '24px', color: 'var(--text-muted)', fontWeight: 500, fontSize: '14px', letterSpacing: '1px', textTransform: 'uppercase', fontFamily: 'Space Grotesk, monospace' }}>
+            Discovering products...
           </p>
         </div>
       ) : products.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon" aria-hidden="true">🔍</div>
+          <div className="empty-icon">🔍</div>
           <h3>No products found</h3>
           <p>Try a different search or browse all products</p>
         </div>
       ) : (
-        <div className="products-grid" role="list" aria-label="Product list">
+        <div className="products-grid" style={{ paddingBottom: '80px' }}>
           {products.map((product, index) => (
-            <AnimatedCard key={product.id} delay={index * 50} role="listitem">
+            <AnimatedCard key={product.id} delay={index * 60}>
               <ProductCard product={product} />
             </AnimatedCard>
           ))}

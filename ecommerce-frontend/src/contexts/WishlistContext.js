@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { API_URL } from '../config';
 
 const WishlistContext = createContext();
-const API_URL = 'http://localhost:5001';
 
 export const useWishlist = () => {
   const context = useContext(WishlistContext);

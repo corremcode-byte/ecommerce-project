@@ -49,7 +49,38 @@ const createTables = async () => {
       )
     `);
 
-    // EXISTING: Products table
+    // NEW: Vendors table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS vendors (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        business_name VARCHAR(255) NOT NULL,
+        owner_name VARCHAR(255) NOT NULL,
+        gst_number VARCHAR(50) NOT NULL UNIQUE,
+        business_address TEXT NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        state VARCHAR(100) NOT NULL,
+        postal_code VARCHAR(20) NOT NULL,
+        phone VARCHAR(20) NOT NULL,
+        status ENUM('pending', 'approved', 'declined') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    // NEW: Admins table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS admins (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // EXISTING: Products table (updated with vendor_id)
     await db.query(`
       CREATE TABLE IF NOT EXISTS products (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -62,8 +93,10 @@ const createTables = async () => {
         image VARCHAR(500),
         stock_quantity INT DEFAULT 0,
         is_featured BOOLEAN DEFAULT FALSE,
+        vendor_id INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+        FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL
       )
     `);
 
@@ -129,6 +162,7 @@ const createTables = async () => {
 
     console.log('✅ All tables created successfully!');
     console.log('   - users, addresses (NEW)');
+    console.log('   - vendors, admins (NEW)');
     console.log('   - categories, products (EXISTING)');
     console.log('   - cart, wishlist (NEW)');
     console.log('   - orders, order_items (NEW)');
@@ -176,10 +210,19 @@ const insertDummyData = async () => {
       );
     }
 
+    // Insert Admin Account
+    const hashPassword = (password) => Buffer.from(password).toString('base64');
+    const adminPassword = hashPassword('Correm@001');
+    await db.query(
+      'INSERT IGNORE INTO admins (email, password, name) VALUES (?, ?, ?)',
+      ['admin@mail.com', adminPassword, 'Admin User']
+    );
+
     console.log('✅ Dummy data inserted successfully!');
     console.log('\n📊 Database is ready with:');
     console.log('   - 5 Categories');
     console.log('   - 8 Products');
+    console.log('   - Admin account: admin@mail.com');
     console.log('   - Users, Cart, Wishlist, Orders tables created (ready for use)');
   } catch (error) {
     console.error('❌ Error inserting dummy data:', error.message);

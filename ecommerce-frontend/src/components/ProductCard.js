@@ -31,7 +31,7 @@ const ProductCard = ({ product }) => {
       const result = await toggleWishlist(product.id);
       if (result.success) {
         showToast(
-          result.added ? 'Added to wishlist' : 'Removed from wishlist',
+          result.added ? 'Added to wishlist ❤️' : 'Removed from wishlist',
           'success'
         );
       }
@@ -53,7 +53,7 @@ const ProductCard = ({ product }) => {
     try {
       const result = await addToCart(product.id, 1);
       if (result.success) {
-        showToast(`${product.name} added to cart!`, 'success');
+        showToast(`${product.name} added to cart! 🛒`, 'success');
       } else {
         showToast(result.message || 'Failed to add to cart', 'error');
       }
@@ -65,20 +65,6 @@ const ProductCard = ({ product }) => {
   const handleCardClick = () => {
     navigate(`/products/${product.id}`);
   };
-
-  // Generate colorful background based on product index
-  const colorVariants = [
-    'linear-gradient(135deg, rgba(240, 253, 244, 0.8) 0%, rgba(220, 252, 231, 0.6) 100%)',
-    'linear-gradient(135deg, rgba(255, 251, 235, 0.8) 0%, rgba(254, 243, 199, 0.6) 100%)',
-    'linear-gradient(135deg, rgba(255, 241, 242, 0.8) 0%, rgba(254, 226, 226, 0.6) 100%)',
-    'linear-gradient(135deg, rgba(237, 242, 247, 0.8) 0%, rgba(226, 232, 240, 0.6) 100%)',
-    'linear-gradient(135deg, rgba(240, 253, 244, 0.8) 0%, rgba(220, 252, 231, 0.6) 100%)',
-    'linear-gradient(135deg, rgba(255, 251, 235, 0.8) 0%, rgba(254, 243, 199, 0.6) 100%)',
-    'linear-gradient(135deg, rgba(255, 241, 242, 0.8) 0%, rgba(254, 226, 226, 0.6) 100%)',
-    'linear-gradient(135deg, rgba(237, 242, 247, 0.8) 0%, rgba(226, 232, 240, 0.6) 100%)'
-  ];
-  
-  const cardColor = colorVariants[product.id % colorVariants.length];
 
   return (
     <div
@@ -93,23 +79,17 @@ const ProductCard = ({ product }) => {
         }
       }}
       aria-label={`View ${product.name}`}
-      style={{
-        animationDelay: '0s',
-        animation: 'scaleIn 0.6s ease-out',
-        background: cardColor
-      }}
     >
       <div className="product-image-wrapper">
         {discount > 0 && (
           <div className="discount-badge" aria-label={`${discount}% off`}>
-            {discount}% OFF
+            -{discount}%
           </div>
         )}
         <button
           className={`wishlist-btn ${inWishlist ? 'in-wishlist' : ''}`}
           onClick={handleWishlistClick}
           aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-          aria-pressed={inWishlist}
         >
           {inWishlist ? '❤️' : '♡'}
         </button>
@@ -117,10 +97,22 @@ const ProductCard = ({ product }) => {
           src={product.image}
           alt={product.name}
           className="product-image"
+          loading="lazy"
           onError={(e) => {
-            e.target.src = `https://via.placeholder.com/400x400?text=${encodeURIComponent(product.name)}`;
+            e.target.src = `https://via.placeholder.com/400x400/1a1a1a/6c5ce7?text=${encodeURIComponent(product.name)}`;
           }}
         />
+        {/* Quick Add Button */}
+        <button
+          className="quick-add-btn"
+          onClick={handleAddToCart}
+          aria-label={`Quick add ${product.name} to cart`}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/>
+          </svg>
+          <span>Quick Add</span>
+        </button>
       </div>
       <div className="product-info">
         <h3 className="product-title">{product.name}</h3>
@@ -129,21 +121,14 @@ const ProductCard = ({ product }) => {
         </p>
         <div className="product-pricing">
           <div className="price-row">
-            <span className="price-label">Regular price</span>
             {original && (
-              <span className="original-price" aria-label={`Original price: ₹${parseFloat(original).toLocaleString('en-IN')}`}>
+              <span className="original-price">
                 ₹{parseFloat(original).toLocaleString('en-IN')}
               </span>
             )}
-          </div>
-          <div className="price-row">
-            <span className="price-label">Sale price</span>
-            <span className="current-price" aria-label={`Price: ₹${parseFloat(price).toLocaleString('en-IN')}`}>
+            <span className="current-price">
               ₹{parseFloat(price).toLocaleString('en-IN')}
             </span>
-          </div>
-          <div className="price-per-item">
-            item / per
           </div>
         </div>
       </div>

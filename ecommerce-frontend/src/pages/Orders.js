@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 
-const API_URL = 'http://localhost:5001';
+import { API_URL } from '../config';
 
 const Orders = () => {
   const { userId, isAuthenticated } = useAuth();

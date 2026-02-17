@@ -5,7 +5,6 @@ const ToastContext = createContext();
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    // Fallback if not in provider
     return {
       toast: { message: null, type: 'info' },
       showToast: () => {},
@@ -45,13 +44,25 @@ export const Toast = ({ message, type, onClose }) => {
 
   if (!message) return null;
 
+  const icons = {
+    success: '✓',
+    error: '✕',
+    info: 'ℹ',
+  };
+
   return (
     <div 
-      className={`toast toast-${type} show`}
+      className={`toast ${type}`}
       role="alert"
       aria-live="polite"
-      aria-atomic="true"
     >
+      <span style={{ 
+        marginRight: '10px', 
+        fontWeight: 'bold',
+        fontSize: '16px' 
+      }}>
+        {icons[type] || 'ℹ'}
+      </span>
       {message}
     </div>
   );

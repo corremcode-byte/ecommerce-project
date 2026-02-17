@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useWishlist } from '../contexts/WishlistContext';
 import ProductCard from '../components/ProductCard';
 
-const API_URL = 'http://localhost:5001';
+import { API_URL } from '../config';
 
 const Wishlist = () => {
   const { isAuthenticated } = useAuth();

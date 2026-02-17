@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 
-const API_URL = 'http://localhost:5001';
+import { API_URL } from '../config';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -26,7 +26,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage({ text: 'Creating account...', type: 'info' });
+    setMessage({ text: 'Creating your account...', type: 'info' });
 
     try {
       const response = await fetch(`${API_URL}/api/auth/register`, {
@@ -38,22 +38,19 @@ const Register = () => {
       const data = await response.json();
 
       if (data.success) {
-        setMessage({ text: '✅ Account created! Redirecting...', type: 'success' });
-        showToast('Account created successfully!', 'success');
-        setTimeout(() => {
-          navigate('/login');
-        }, 1500);
+        setMessage({ text: 'Account created! Redirecting...', type: 'success' });
+        showToast('Account created successfully! ✨', 'success');
+        setTimeout(() => navigate('/login'), 1500);
       } else {
-        setMessage({ text: `❌ ${data.message || 'Registration failed'}`, type: 'error' });
+        setMessage({ text: data.message || 'Registration failed', type: 'error' });
         showToast(data.message || 'Registration failed', 'error');
       }
     } catch (error) {
       setMessage({
-        text: '❌ Error: Unable to connect to server. Make sure backend is running.',
+        text: 'Unable to connect to server. Please check if backend is running.',
         type: 'error'
       });
       showToast('Error connecting to server', 'error');
-      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
@@ -62,14 +59,15 @@ const Register = () => {
   return (
     <div className="form-page">
       <div className="form-container">
-        <h2 className="form-title">Create Account</h2>
-        <p className="form-subtitle">Join Furnii and start shopping</p>
+        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+          <span style={{ fontSize: '48px' }}>✨</span>
+        </div>
+        <h2 className="form-title" style={{ textAlign: 'center' }}>Join Furnii</h2>
+        <p className="form-subtitle" style={{ textAlign: 'center' }}>Create your account to start shopping</p>
 
-        <form onSubmit={handleSubmit} aria-label="Registration form">
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="full_name" className="form-label">
-              Full Name
-            </label>
+            <label htmlFor="full_name" className="form-label">Full Name</label>
             <input
               type="text"
               id="full_name"
@@ -80,32 +78,26 @@ const Register = () => {
               value={formData.full_name}
               onChange={handleChange}
               autoComplete="name"
-              aria-required="true"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="email" className="form-label">
-              Email Address
-            </label>
+            <label htmlFor="email" className="form-label">Email</label>
             <input
               type="email"
               id="email"
               name="email"
               className="form-input"
               required
-              placeholder="your.email@example.com"
+              placeholder="you@example.com"
               value={formData.email}
               onChange={handleChange}
               autoComplete="email"
-              aria-required="true"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="phone" className="form-label">
-              Phone Number
-            </label>
+            <label htmlFor="phone" className="form-label">Phone</label>
             <input
               type="tel"
               id="phone"
@@ -116,44 +108,35 @@ const Register = () => {
               value={formData.phone}
               onChange={handleChange}
               autoComplete="tel"
-              aria-required="true"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password" className="form-label">
-              Password
-            </label>
+            <label htmlFor="password" className="form-label">Password</label>
             <input
               type="password"
               id="password"
               name="password"
               className="form-input"
               required
-              placeholder="Enter your password"
+              placeholder="Min. 6 characters"
               value={formData.password}
               onChange={handleChange}
               autoComplete="new-password"
-              aria-required="true"
               minLength="6"
             />
           </div>
 
           {message.text && (
             <div className={`message ${message.type}`} role="alert">
-              {message.text}
+              {message.type === 'error' ? '⚠️ ' : message.type === 'success' ? '✅ ' : '⏳ '}{message.text}
             </div>
           )}
 
-          <button
-            type="submit"
-            className="btn btn-primary btn-full"
-            disabled={loading}
-            aria-label="Register button"
-          >
+          <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
             {loading ? (
               <>
-                <span className="loading-spinner" aria-hidden="true"></span>
+                <span className="loading-spinner" />
                 Creating account...
               </>
             ) : (
@@ -163,7 +146,7 @@ const Register = () => {
         </form>
 
         <p className="form-footer">
-          Already have an account? <Link to="/login">Login here</Link>
+          Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </div>
     </div>
