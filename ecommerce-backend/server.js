@@ -655,9 +655,11 @@ app.get('/api/health', (req, res) => {
   }
 })();
 
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-  console.log(`✅ Database connected successfully!`);
+// Only listen when running locally (not on Vercel)
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+    console.log(`✅ Database connected successfully!`);
     console.log(`📡 API endpoints available:`);
     console.log(`   - Authentication: /api/auth/register, /api/auth/login`);
     console.log(`   - Vendor: /api/vendor/register, /api/vendor/login`);
@@ -667,4 +669,8 @@ app.listen(PORT, () => {
     console.log(`   - Wishlist: /api/wishlist/:userId`);
     console.log(`   - Orders: /api/orders/:userId`);
     console.log(`   - Profile: /api/profile/:userId`);
-});
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
