@@ -11,8 +11,22 @@ const Header = () => {
   const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.classList.add('mobile-menu-open');
+    } else {
+      document.body.classList.remove('mobile-menu-open');
+    }
+    return () => {
+      document.body.classList.remove('mobile-menu-open');
+    };
+  }, [mobileMenuOpen]);
   const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef(null);
+  const mobileMenuRef = useRef(null);
   const navigate = useNavigate();
 
   // Detect vendor & admin sessions from localStorage
@@ -57,9 +71,28 @@ const Header = () => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+        // Don't close if clicking the hamburger button
+        if (!event.target.closest('.mobile-menu-toggle')) {
+          setMobileMenuOpen(false);
+        }
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setMobileMenuOpen(false);
+    };
+    window.addEventListener('popstate', handleRouteChange);
+    return () => window.removeEventListener('popstate', handleRouteChange);
   }, []);
 
   const handleSearch = (e) => {
@@ -104,10 +137,24 @@ const Header = () => {
         boxShadow: scrolled ? 'var(--header-shadow)' : 'none'
       }}>
         <div className="header-content">
-          <Link to="/" className="logo" aria-label="Furnii Home">
-            <span className="logo-icon" aria-hidden="true">✦</span>
-            <span className="logo-text">FURNII</span>
-          </Link>
+          <div className="header-left">
+            <button 
+              className="mobile-menu-toggle"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <span className={`hamburger ${mobileMenuOpen ? 'active' : ''}`}>
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </button>
+            <Link to="/" className="logo" aria-label="Furnii Home">
+              <span className="logo-icon" aria-hidden="true">✦</span>
+              <span className="logo-text">FURNII</span>
+            </Link>
+          </div>
 
           <div className="search-bar">
             <form onSubmit={handleSearch} className="search-wrapper">
@@ -330,6 +377,107 @@ const Header = () => {
                 <span className="cart-badge-icon">{cartCount}</span>
               )}
             </Link>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <div className={`mobile-menu ${mobileMenuOpen ? 'active' : ''}`} ref={mobileMenuRef}>
+          <div className="mobile-menu-content">
+            <div className="mobile-search">
+              <form onSubmit={handleSearch} className="search-wrapper">
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Search for furniture, decor..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Search products"
+                />
+                <button type="submit" className="search-icon-btn" aria-label="Search">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                    <circle cx="11" cy="11" r="7"/>
+                    <path d="m21 21-4.35-4.35"/>
+                  </svg>
+                </button>
+              </form>
+            </div>
+
+            <div className="mobile-menu-links">
+              <Link to="/" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                Home
+              </Link>
+              <Link to="/products" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                Products
+              </Link>
+              <Link to="/wishlist" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                Wishlist
+              </Link>
+              <Link to="/cart" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                Cart ({cartCount})
+              </Link>
+
+              {isAuthenticated && (
+                <>
+                  <div className="mobile-menu-divider" />
+                  <Link to="/profile" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    My Profile
+                  </Link>
+                  <Link to="/orders" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    My Orders
+                  </Link>
+                  <button className="mobile-menu-link" onClick={() => { handleLogout(); setMobileMenuOpen(false); }} style={{ color: 'var(--danger)' }}>
+                    Logout (Customer)
+                  </button>
+                </>
+              )}
+
+              {vendorSession && (
+                <>
+                  <div className="mobile-menu-divider" />
+                  <div className="mobile-menu-label">Vendor: {vendorSession.business_name}</div>
+                  <Link to="/vendor-dashboard" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    Vendor Dashboard
+                  </Link>
+                  <button className="mobile-menu-link" onClick={() => { handleVendorLogout(); setMobileMenuOpen(false); }} style={{ color: 'var(--danger)' }}>
+                    Logout (Vendor)
+                  </button>
+                </>
+              )}
+
+              {adminSession && (
+                <>
+                  <div className="mobile-menu-divider" />
+                  <div className="mobile-menu-label">Admin: {adminSession.email}</div>
+                  <Link to="/admin-dashboard" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    Admin Dashboard
+                  </Link>
+                  <button className="mobile-menu-link" onClick={() => { handleAdminLogout(); setMobileMenuOpen(false); }} style={{ color: 'var(--danger)' }}>
+                    Logout (Admin)
+                  </button>
+                </>
+              )}
+
+              {!hasAnySession && (
+                <>
+                  <div className="mobile-menu-divider" />
+                  <Link to="/login" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    Sign In
+                  </Link>
+                  <Link to="/register" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    Create Account
+                  </Link>
+                  <Link to="/vendor-register" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    Become a Vendor
+                  </Link>
+                  <Link to="/vendor-login" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    Vendor Portal
+                  </Link>
+                  <Link to="/admin-login" className="mobile-menu-link" onClick={() => setMobileMenuOpen(false)}>
+                    Admin
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </header>
