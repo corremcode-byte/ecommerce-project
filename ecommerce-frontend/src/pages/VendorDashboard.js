@@ -10,6 +10,7 @@ const VendorDashboard = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [categories, setCategories] = useState([]);
   const [productForm, setProductForm] = useState({
     name: '',
@@ -22,6 +23,7 @@ const VendorDashboard = () => {
     is_featured: false
   });
   const [submitting, setSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -82,49 +84,101 @@ const VendorDashboard = () => {
     });
   };
 
+  const resetProductForm = () => {
+    setProductForm({
+      name: '',
+      description: '',
+      price: '',
+      sale_price: '',
+      category_id: '',
+      image: '',
+      stock_quantity: '',
+      is_featured: false
+    });
+    setEditingProduct(null);
+    setShowProductForm(false);
+  };
+
+  const handleEditProduct = (product) => {
+    setProductForm({
+      name: product.name,
+      description: product.description || '',
+      price: String(product.price),
+      sale_price: product.sale_price ? String(product.sale_price) : '',
+      category_id: String(product.category_id),
+      image: product.image || '',
+      stock_quantity: String(product.stock_quantity ?? ''),
+      is_featured: !!product.is_featured
+    });
+    setEditingProduct(product.id);
+    setShowProductForm(true);
+  };
+
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    const payload = {
+      ...productForm,
+      vendor_id: vendor.id,
+      price: parseFloat(productForm.price),
+      sale_price: productForm.sale_price ? parseFloat(productForm.sale_price) : null,
+      stock_quantity: parseInt(productForm.stock_quantity) || 0,
+      category_id: parseInt(productForm.category_id)
+    };
 
     try {
-      const response = await fetch(`${API_URL}/api/vendor/products`, {
-        method: 'POST',
+      const isEdit = !!editingProduct;
+      const url = isEdit ? `${API_URL}/api/vendor/products/${editingProduct}` : `${API_URL}/api/vendor/products`;
+      const response = await fetch(url, {
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...productForm,
-          vendor_id: vendor.id,
-          price: parseFloat(productForm.price),
-          sale_price: productForm.sale_price ? parseFloat(productForm.sale_price) : null,
-          stock_quantity: parseInt(productForm.stock_quantity) || 0,
-          category_id: parseInt(productForm.category_id)
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json();
 
       if (data.success) {
-        showToast('Product added successfully!', 'success');
-        setProductForm({
-          name: '',
-          description: '',
-          price: '',
-          sale_price: '',
-          category_id: '',
-          image: '',
-          stock_quantity: '',
-          is_featured: false
-        });
-        setShowProductForm(false);
+        showToast(isEdit ? 'Product updated successfully!' : 'Product added successfully!', 'success');
+        resetProductForm();
         loadProducts(vendor.id);
       } else {
-        showToast(data.message || 'Failed to add product', 'error');
+        showToast(data.message || (isEdit ? 'Failed to update product' : 'Failed to add product'), 'error');
       }
     } catch (error) {
-      showToast('Error adding product', 'error');
+      showToast(editingProduct ? 'Error updating product' : 'Error adding product', 'error');
       console.error('Error:', error);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleDeleteProduct = async (product) => {
+    try {
+      const response = await fetch(`${API_URL}/api/vendor/products/${product.id}?vendor_id=${vendor.id}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (data.success) {
+        showToast('Product deleted successfully!', 'success');
+        setDeleteConfirm(null);
+        loadProducts(vendor.id);
+      } else {
+        showToast(data.message || 'Failed to delete product', 'error');
+      }
+    } catch (error) {
+      showToast('Error deleting product', 'error');
+      console.error('Error:', error);
+    }
+  };
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) {
+      showToast('Please select an image file (JPEG, PNG, etc.)', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setProductForm(prev => ({ ...prev, image: reader.result }));
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleLogout = () => {
@@ -170,7 +224,7 @@ const VendorDashboard = () => {
         <div className="vendor-actions-bar">
           <button
             className="btn btn-primary btn-large"
-            onClick={() => setShowProductForm(!showProductForm)}
+            onClick={() => (showProductForm ? resetProductForm() : setShowProductForm(true))}
           >
             {showProductForm ? '✗ Cancel' : '+ Upload Product'}
           </button>
@@ -178,7 +232,7 @@ const VendorDashboard = () => {
 
         {showProductForm && (
           <div className="product-form-container">
-            <h2 className="form-title">Add New Product</h2>
+            <h2 className="form-title">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
             <form onSubmit={handleProductSubmit} className="product-form">
               <div className="form-row">
                 <div className="form-group">
@@ -265,15 +319,44 @@ const VendorDashboard = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Product Image URL</label>
-                <input
-                  type="url"
-                  name="image"
-                  className="form-input"
-                  value={productForm.image}
-                  onChange={handleProductFormChange}
-                  placeholder="https://example.com/image.jpg"
-                />
+                <label className="form-label">Product Image</label>
+                <div className="form-image-options">
+                  <input
+                    type="url"
+                    name="image"
+                    className="form-input"
+                    value={productForm.image}
+                    onChange={handleProductFormChange}
+                    placeholder="Paste image URL (e.g. https://example.com/image.jpg)"
+                  />
+                  <label className="btn btn-secondary btn-upload">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    📷 Upload photo
+                  </label>
+                </div>
+                {productForm.image && (
+                  <>
+                    <p className="form-label form-image-link-label">Image link / preview:</p>
+                    <div className="form-image-preview-row">
+                      <img
+                        src={productForm.image}
+                        alt="Preview"
+                        className="form-image-preview"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                      <div className="form-image-link">
+                        <span className="form-image-link-text" title={productForm.image}>
+                          {productForm.image.startsWith('data:') ? 'Uploaded image (data)' : productForm.image}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="form-group">
@@ -293,7 +376,7 @@ const VendorDashboard = () => {
                 className="btn btn-primary btn-full"
                 disabled={submitting}
               >
-                {submitting ? 'Adding Product...' : 'Add Product'}
+                {submitting ? (editingProduct ? 'Updating...' : 'Adding Product...') : (editingProduct ? 'Update Product' : 'Add Product')}
               </button>
             </form>
           </div>
@@ -336,9 +419,30 @@ const VendorDashboard = () => {
                   {product.is_featured && (
                     <span className="featured-badge">Featured</span>
                   )}
+                  <div className="vendor-product-actions">
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => handleEditProduct(product)}>
+                      Edit
+                    </button>
+                    <button type="button" className="btn btn-danger btn-sm" onClick={() => setDeleteConfirm(product)}>
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {deleteConfirm && (
+          <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
+            <div className="modal-content vendor-delete-modal" onClick={(e) => e.stopPropagation()}>
+              <h3>Delete product?</h3>
+              <p>“{deleteConfirm.name}” will be permanently deleted. This cannot be undone.</p>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>Cancel</button>
+                <button type="button" className="btn btn-danger" onClick={() => handleDeleteProduct(deleteConfirm)}>Delete</button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -1,17 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useWishlist } from '../contexts/WishlistContext';
 import ProductCard from '../components/ProductCard';
 
-import { API_URL } from '../config';
-
 const Wishlist = () => {
   const { isAuthenticated } = useAuth();
-  const { wishlistItems, loadWishlist } = useWishlist();
+  const { wishlistItems, loadWishlist, loading } = useWishlist();
   const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -21,36 +17,22 @@ const Wishlist = () => {
     loadWishlist();
   }, [isAuthenticated, navigate, loadWishlist]);
 
-  useEffect(() => {
-    if (wishlistItems.length > 0) {
-      loadProducts();
-    } else {
-      setProducts([]);
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Backend returns wishlist rows with product_id, name, slug, price, sale_price, image, stock_quantity.
+  // Shape them as product objects so ProductCard works and order is preserved.
+  const products = useMemo(() => {
+    return wishlistItems.map((item) => ({
+      id: item.product_id,
+      name: item.name,
+      slug: item.slug,
+      price: item.price,
+      sale_price: item.sale_price,
+      image: item.image,
+      stock_quantity: item.stock_quantity,
+      description: item.description || '',
+      category_name: item.category_name || '',
+      is_featured: item.is_featured || false
+    }));
   }, [wishlistItems]);
-
-  const loadProducts = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/api/products`);
-      const data = await response.json();
-
-      if (data.success) {
-        // Match wishlist items with products
-        const wishlistProductIds = wishlistItems.map(item => item.product_id);
-        const matchedProducts = data.data.filter(product => 
-          wishlistProductIds.includes(product.id)
-        );
-        setProducts(matchedProducts);
-      }
-    } catch (error) {
-      console.error('Error loading products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!isAuthenticated) {
     return null;

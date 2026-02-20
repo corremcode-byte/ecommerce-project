@@ -310,6 +310,51 @@ app.get('/api/vendor/products/:vendorId', async (req, res) => {
   }
 });
 
+app.put('/api/vendor/products/:id', async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const { vendor_id, name, description, price, sale_price, category_id, image, stock_quantity, is_featured } = req.body;
+
+    if (!vendor_id || !name || !price || !category_id) {
+      return res.status(400).json({ success: false, message: 'Name, price, and category are required' });
+    }
+
+    const [existing] = await db.query('SELECT id, vendor_id FROM products WHERE id = ?', [productId]);
+    if (existing.length === 0) return res.status(404).json({ success: false, message: 'Product not found' });
+    if (existing[0].vendor_id !== parseInt(vendor_id)) {
+      return res.status(403).json({ success: false, message: 'You can only edit your own products' });
+    }
+
+    await db.query(
+      'UPDATE products SET name = ?, description = ?, price = ?, sale_price = ?, category_id = ?, image = ?, stock_quantity = ?, is_featured = ? WHERE id = ?',
+      [name, description, parseFloat(price), sale_price ? parseFloat(sale_price) : null, category_id, image || null, parseInt(stock_quantity) || 0, !!is_featured, productId]
+    );
+    const [product] = await db.query('SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?', [productId]);
+    res.json({ success: true, data: product[0], message: 'Product updated successfully!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/vendor/products/:id', async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const vendorId = req.query.vendor_id;
+    if (!vendorId) return res.status(400).json({ success: false, message: 'vendor_id is required' });
+
+    const [existing] = await db.query('SELECT id, vendor_id FROM products WHERE id = ?', [productId]);
+    if (existing.length === 0) return res.status(404).json({ success: false, message: 'Product not found' });
+    if (existing[0].vendor_id !== parseInt(vendorId)) {
+      return res.status(403).json({ success: false, message: 'You can only delete your own products' });
+    }
+
+    await db.query('DELETE FROM products WHERE id = ?', [productId]);
+    res.json({ success: true, message: 'Product deleted successfully!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ============================================
 // PROFILE ROUTES
 // ============================================
@@ -439,10 +484,14 @@ app.delete('/api/cart/:id', async (req, res) => {
 app.get('/api/wishlist/:userId', async (req, res) => {
   try {
     const [items] = await db.query(
-      `SELECT w.id, w.product_id, p.name, p.slug, p.price, p.sale_price, p.image, p.stock_quantity
-       FROM wishlist w 
-       JOIN products p ON w.product_id = p.id 
-       WHERE w.user_id = ?`, 
+      `SELECT w.id, w.product_id, w.created_at,
+       p.name, p.slug, p.description, p.price, p.sale_price, p.image, p.stock_quantity, p.is_featured,
+       c.name AS category_name
+       FROM wishlist w
+       JOIN products p ON w.product_id = p.id
+       LEFT JOIN categories c ON p.category_id = c.id
+       WHERE w.user_id = ?
+       ORDER BY w.created_at DESC`,
       [req.params.userId]
     );
     res.json({ success: true, data: items });
@@ -675,6 +724,58 @@ app.get('/api/products', async (req, res) => {
         sqlState: error.sqlState
       } : undefined
     });
+  }
+});
+
+app.get('/api/products/:id/reviews', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id, 10);
+    if (isNaN(productId)) return res.status(400).json({ success: false, message: 'Invalid product id' });
+    const [reviews] = await db.query(
+      `SELECT r.id, r.product_id, r.user_id, r.rating, r.comment, r.created_at, u.full_name AS user_name
+       FROM reviews r
+       LEFT JOIN users u ON r.user_id = u.id
+       WHERE r.product_id = ?
+       ORDER BY r.created_at DESC`,
+      [productId]
+    );
+    const [avg] = await db.query(
+      'SELECT COALESCE(AVG(rating), 0) AS avg_rating, COUNT(*) AS total FROM reviews WHERE product_id = ?',
+      [productId]
+    );
+    res.json({
+      success: true,
+      data: reviews,
+      summary: { average: Number(avg[0].avg_rating), total: avg[0].total }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/reviews', async (req, res) => {
+  try {
+    const { user_id, product_id, rating, comment } = req.body;
+    if (!user_id || !product_id || rating == null) {
+      return res.status(400).json({ success: false, message: 'user_id, product_id and rating are required' });
+    }
+    const r = Math.round(Number(rating));
+    if (r < 1 || r > 5) {
+      return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
+    }
+    await db.query(
+      'INSERT INTO reviews (user_id, product_id, rating, comment) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE rating = VALUES(rating), comment = VALUES(comment)',
+      [user_id, product_id, r, comment || null]
+    );
+    const [rows] = await db.query(
+      `SELECT r.id, r.product_id, r.user_id, r.rating, r.comment, r.created_at, u.full_name AS user_name
+       FROM reviews r LEFT JOIN users u ON r.user_id = u.id
+       WHERE r.product_id = ? AND r.user_id = ? ORDER BY r.created_at DESC LIMIT 1`,
+      [product_id, user_id]
+    );
+    res.json({ success: true, data: rows[0], message: 'Review submitted!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -932,6 +1033,9 @@ const initializeDatabase = async () => {
     }
 
     try {
+      await db.query('ALTER TABLE products MODIFY COLUMN image TEXT');
+    } catch (e) { /* allow long image URLs / data URLs */ }
+    try {
       await db.query('ALTER TABLE products ADD CONSTRAINT fk_products_vendor FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL');
     } catch (e) {
       // Foreign key might already exist or vendor_id column doesn't exist yet
@@ -1004,6 +1108,26 @@ const initializeDatabase = async () => {
     }
 
     await db.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        user_id INT NOT NULL,
+        rating TINYINT NOT NULL,
+        comment TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY user_product_review (user_id, product_id)
+      )
+    `);
+    console.log('✅ Created reviews table');
+
+    try {
+      await db.query('ALTER TABLE reviews ADD CONSTRAINT fk_reviews_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE');
+      await db.query('ALTER TABLE reviews ADD CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE');
+    } catch (e) {
+      // Foreign keys might already exist
+    }
+
+    await db.query(`
       CREATE TABLE IF NOT EXISTS orders (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
@@ -1052,8 +1176,15 @@ const initializeDatabase = async () => {
       ['Seating', 'seating', 'https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=400', null],
       ['Tables', 'tables', 'https://images.unsplash.com/photo-1530018607912-eff2daa1bac4?w=400', null],
       ['Storage', 'storage', 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=400', null],
+      ['Lighting', 'lighting', 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=400', null],
+      ['Decor', 'decor', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400', null],
+      ['Chocolates', 'chocolates', 'https://images.unsplash.com/photo-1511381939415-e44015466834?w=400', null],
+      ['Sweets & Gifts', 'sweets-gifts', 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400', null],
+      ['Beverages', 'beverages', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400', null],
       ['Dining Chairs', 'dining-chairs', 'https://images.unsplash.com/photo-1503602642458-232111445657?w=400', 1],
       ['Dining Tables', 'dining-tables', 'https://images.unsplash.com/photo-1617806118233-18e1de247200?w=400', 2],
+      ['Beds', 'beds', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400', 1],
+      ['Desks', 'desks', 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=400', 2],
     ];
 
     for (const cat of categories) {

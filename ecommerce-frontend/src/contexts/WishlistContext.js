@@ -16,25 +16,29 @@ export const WishlistProvider = ({ children }) => {
   const { userId, isAuthenticated } = useAuth();
   const [wishlistItems, setWishlistItems] = useState([]);
   const [wishlistCount, setWishlistCount] = useState(0);
-  const [loading] = useState(false); // eslint-disable-line no-unused-vars
+  const [loading, setLoading] = useState(false);
 
   const loadWishlist = async () => {
     if (!isAuthenticated || !userId) {
       setWishlistItems([]);
       setWishlistCount(0);
+      setLoading(false);
       return;
     }
 
     try {
+      setLoading(true);
       const response = await fetch(`${API_URL}/api/wishlist/${userId}`);
       const data = await response.json();
       
       if (data.success) {
-        setWishlistItems(data.data);
-        setWishlistCount(data.data.length);
+        setWishlistItems(data.data || []);
+        setWishlistCount((data.data || []).length);
       }
     } catch (error) {
       console.error('Error loading wishlist:', error);
+    } finally {
+      setLoading(false);
     }
   };
 

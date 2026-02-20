@@ -90,7 +90,7 @@ const createTables = async () => {
         price DECIMAL(10, 2) NOT NULL,
         sale_price DECIMAL(10, 2),
         category_id INT,
-        image VARCHAR(500),
+        image TEXT,
         stock_quantity INT DEFAULT 0,
         is_featured BOOLEAN DEFAULT FALSE,
         vendor_id INT,
@@ -125,6 +125,21 @@ const createTables = async () => {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
         UNIQUE KEY user_product (user_id, product_id)
+      )
+    `);
+
+    // Reviews table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        user_id INT NOT NULL,
+        rating TINYINT NOT NULL,
+        comment TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY user_product_review (user_id, product_id)
       )
     `);
 
@@ -180,8 +195,15 @@ const insertDummyData = async () => {
       ['Seating', 'seating', 'https://images.unsplash.com/photo-1506439773649-6e0eb8cfb237?w=400', null],
       ['Tables', 'tables', 'https://images.unsplash.com/photo-1530018607912-eff2daa1bac4?w=400', null],
       ['Storage', 'storage', 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=400', null],
+      ['Lighting', 'lighting', 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?w=400', null],
+      ['Decor', 'decor', 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400', null],
+      ['Chocolates', 'chocolates', 'https://images.unsplash.com/photo-1511381939415-e44015466834?w=400', null],
+      ['Sweets & Gifts', 'sweets-gifts', 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400', null],
+      ['Beverages', 'beverages', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400', null],
       ['Dining Chairs', 'dining-chairs', 'https://images.unsplash.com/photo-1503602642458-232111445657?w=400', 1],
       ['Dining Tables', 'dining-tables', 'https://images.unsplash.com/photo-1617806118233-18e1de247200?w=400', 2],
+      ['Beds', 'beds', 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400', 1],
+      ['Desks', 'desks', 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=400', 2],
     ];
 
     for (const cat of categories) {
@@ -220,7 +242,7 @@ const insertDummyData = async () => {
 
     console.log('✅ Dummy data inserted successfully!');
     console.log('\n📊 Database is ready with:');
-    console.log('   - 5 Categories');
+    console.log('   - 12 Categories');
     console.log('   - 8 Products');
     console.log('   - Admin account: admin@mail.com');
     console.log('   - Users, Cart, Wishlist, Orders tables created (ready for use)');

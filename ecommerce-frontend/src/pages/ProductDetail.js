@@ -14,17 +14,42 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userId } = useAuth();
   const { showToast } = useToast();
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage] = useState(0);
+  const [reviews, setReviews] = useState([]);
+  const [reviewSummary, setReviewSummary] = useState({ average: 0, total: 0 });
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
 
   useEffect(() => {
     loadProduct();
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadReviews = async (productId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/products/${productId}/reviews`);
+      const data = await response.json();
+      if (data.success) {
+        setReviews(data.data || []);
+        setReviewSummary(data.summary || { average: 0, total: 0 });
+      }
+    } catch (err) {
+      console.error('Error loading reviews:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (product && product.id) loadReviews(product.id);
+  }, [product?.id]);
 
   const loadProduct = async () => {
     try {
@@ -94,6 +119,40 @@ const ProductDetail = () => {
       }
     } catch (error) {
       showToast(error.message || 'Error updating wishlist', 'error');
+    }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      showToast('Please login to submit a review', 'error');
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      const response = await fetch(`${API_URL}/api/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          product_id: product.id,
+          rating: reviewForm.rating,
+          comment: reviewForm.comment.trim() || null
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        showToast('Review submitted!', 'success');
+        setReviewForm({ rating: 5, comment: '' });
+        loadReviews(product.id);
+      } else {
+        showToast(data.message || 'Failed to submit review', 'error');
+      }
+    } catch (err) {
+      showToast('Error submitting review', 'error');
+      console.error(err);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -287,6 +346,60 @@ const ProductDetail = () => {
             </AnimatedCard>
           </div>
         </div>
+
+        {/* Reviews */}
+        <section className="product-reviews-section" aria-label="Product reviews">
+          <h2 className="detail-section-title">Reviews</h2>
+          <div className="reviews-summary">
+            <span className="reviews-average" aria-label={`Average rating: ${reviewSummary.average.toFixed(1)} out of 5`}>
+              ★ {reviewSummary.average.toFixed(1)}
+            </span>
+            <span className="reviews-count">({reviewSummary.total} {reviewSummary.total === 1 ? 'review' : 'reviews'})</span>
+          </div>
+
+          {isAuthenticated && (
+            <form className="review-form" onSubmit={handleReviewSubmit}>
+              <label className="form-label">Your rating</label>
+              <select
+                className="form-input review-rating-select"
+                value={reviewForm.rating}
+                onChange={(e) => setReviewForm(f => ({ ...f, rating: Number(e.target.value) }))}
+              >
+                {[5, 4, 3, 2, 1].map((r) => (
+                  <option key={r} value={r}>{r} ★</option>
+                ))}
+              </select>
+              <label className="form-label">Your review (optional)</label>
+              <textarea
+                className="form-input form-textarea"
+                rows={3}
+                placeholder="Share your experience..."
+                value={reviewForm.comment}
+                onChange={(e) => setReviewForm(f => ({ ...f, comment: e.target.value }))}
+              />
+              <button type="submit" className="btn btn-primary" disabled={submittingReview}>
+                {submittingReview ? 'Submitting...' : 'Submit review'}
+              </button>
+            </form>
+          )}
+
+          <div className="reviews-list">
+            {reviews.length === 0 ? (
+              <p className="reviews-empty">No reviews yet. Be the first to review!</p>
+            ) : (
+              reviews.map((rev) => (
+                <div key={rev.id} className="review-card">
+                  <div className="review-header">
+                    <span className="review-rating">{'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}</span>
+                    <span className="review-author">{rev.user_name || 'Customer'}</span>
+                    <span className="review-date">{new Date(rev.created_at).toLocaleDateString()}</span>
+                  </div>
+                  {rev.comment && <p className="review-comment">{rev.comment}</p>}
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
