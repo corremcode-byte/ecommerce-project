@@ -2548,6 +2548,13 @@ main {
     gap: 36px;
 }
 
+/* Spacing between each card block (pricing, description, stock, quantity, actions, features) */
+.product-detail-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+}
+
 .product-detail-title {
     font-family: 'Space Grotesk', sans-serif;
     font-size: 44px;

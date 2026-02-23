@@ -271,9 +271,9 @@ const ProductDetail = () => {
           {/* Product Info */}
           <div className="product-detail-info">
             <AnimatedCard delay={100}>
-              <h1 className="product-detail-title">{product.name}</h1>
-              
-              <div className="product-detail-pricing">
+              <div className="product-detail-cards">
+                <h1 className="product-detail-title">{product.name}</h1>
+                <div className="product-detail-pricing">
                 <div className="price-row-detail">
                   <span className="price-label">Regular price</span>
                   {original && (
@@ -377,6 +377,7 @@ const ProductDetail = () => {
                   <span className="feature-icon">✓</span>
                   <span className="feature-text">Authentic quality</span>
                 </div>
+              </div>
               </div>
             </AnimatedCard>
           </div>
