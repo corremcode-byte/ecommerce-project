@@ -727,6 +727,26 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
+app.get('/api/products/:id/can-review', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id, 10);
+    const userId = req.query.user_id;
+    if (isNaN(productId) || !userId) {
+      return res.json({ success: true, canReview: false });
+    }
+    const [rows] = await db.query(
+      `SELECT 1 FROM order_items oi
+       JOIN orders o ON oi.order_id = o.id
+       WHERE o.user_id = ? AND oi.product_id = ? AND o.status != 'Cancelled'
+       LIMIT 1`,
+      [userId, productId]
+    );
+    res.json({ success: true, canReview: rows.length > 0 });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.get('/api/products/:id/reviews', async (req, res) => {
   try {
     const productId = parseInt(req.params.id, 10);
@@ -763,6 +783,14 @@ app.post('/api/reviews', async (req, res) => {
     if (r < 1 || r > 5) {
       return res.status(400).json({ success: false, message: 'Rating must be between 1 and 5' });
     }
+    const [purchased] = await db.query(
+      `SELECT 1 FROM order_items oi JOIN orders o ON oi.order_id = o.id
+       WHERE o.user_id = ? AND oi.product_id = ? AND o.status != 'Cancelled' LIMIT 1`,
+      [user_id, product_id]
+    );
+    if (purchased.length === 0) {
+      return res.status(403).json({ success: false, message: 'Only customers who have purchased this product can leave a review.' });
+    }
     await db.query(
       'INSERT INTO reviews (user_id, product_id, rating, comment) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE rating = VALUES(rating), comment = VALUES(comment)',
       [user_id, product_id, r, comment || null]
@@ -791,6 +819,27 @@ app.get('/api/products/:slug', async (req, res) => {
     }
     
     res.json({ success: true, data: product[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/similar-products/:productId', async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId, 10);
+    if (isNaN(productId)) return res.status(400).json({ success: false, message: 'Invalid product id' });
+    const [product] = await db.query('SELECT category_id FROM products WHERE id = ?', [productId]);
+    if (!product.length) return res.json({ success: true, data: [] });
+    const categoryId = product[0].category_id;
+    if (categoryId == null) {
+      const [others] = await db.query('SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id != ? ORDER BY p.created_at DESC LIMIT 4', [productId]);
+      return res.json({ success: true, data: others });
+    }
+    const [similar] = await db.query(
+      'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.category_id = ? AND p.id != ? ORDER BY p.created_at DESC LIMIT 4',
+      [categoryId, productId]
+    );
+    res.json({ success: true, data: similar });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

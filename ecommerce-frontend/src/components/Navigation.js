@@ -3,10 +3,18 @@ import { Link, useLocation } from 'react-router-dom';
 
 const Navigation = () => {
   const location = useLocation();
+  const pathname = location.pathname;
+  const searchParams = new URLSearchParams(location.search);
+  const categoryParam = searchParams.get('category');
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path) || location.search.includes(path.split('=')[1] || '');
+    if (path === '/') return pathname === '/';
+    if (path === '/products') {
+      return pathname === '/products' && !categoryParam && !pathname.match(/^\/products\/\d+$/);
+    }
+    const pathCategory = path.startsWith('/products?category=') ? path.split('category=')[1] : null;
+    if (pathCategory) return pathname === '/products' && categoryParam === pathCategory;
+    return false;
   };
 
   const navItems = [
@@ -25,7 +33,7 @@ const Navigation = () => {
           <Link
             key={item.path}
             to={item.path}
-            className={isActive(item.path) && (item.path === '/' ? location.pathname === '/' : true) ? 'active' : ''}
+            className={isActive(item.path) ? 'active' : ''}
           >
             {item.label}
           </Link>

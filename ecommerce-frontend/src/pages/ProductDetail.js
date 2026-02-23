@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/Toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AnimatedCard from '../components/AnimatedCard';
+import ProductCard from '../components/ProductCard';
 
 import { API_URL } from '../config';
 
@@ -25,6 +26,8 @@ const ProductDetail = () => {
   const [reviewSummary, setReviewSummary] = useState({ average: 0, total: 0 });
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [canReview, setCanReview] = useState(false);
+  const [similarProducts, setSimilarProducts] = useState([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -49,6 +52,37 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (product && product.id) loadReviews(product.id);
+  }, [product?.id]);
+
+  useEffect(() => {
+    if (!product?.id || !isAuthenticated || !userId) {
+      setCanReview(false);
+      return;
+    }
+    const check = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/products/${product.id}/can-review?user_id=${userId}`);
+        const data = await res.json();
+        setCanReview(data.canReview === true);
+      } catch {
+        setCanReview(false);
+      }
+    };
+    check();
+  }, [product?.id, isAuthenticated, userId]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/similar-products/${product.id}`);
+        const data = await res.json();
+        setSimilarProducts(data.data || []);
+      } catch {
+        setSimilarProducts([]);
+      }
+    };
+    load();
   }, [product?.id]);
 
   const loadProduct = async () => {
@@ -357,7 +391,7 @@ const ProductDetail = () => {
             <span className="reviews-count">({reviewSummary.total} {reviewSummary.total === 1 ? 'review' : 'reviews'})</span>
           </div>
 
-          {isAuthenticated && (
+          {isAuthenticated && canReview && (
             <form className="review-form" onSubmit={handleReviewSubmit}>
               <label className="form-label">Your rating</label>
               <select
@@ -382,6 +416,9 @@ const ProductDetail = () => {
               </button>
             </form>
           )}
+          {isAuthenticated && !canReview && (
+            <p className="reviews-only-buyers">Only customers who have purchased this product can leave a review.</p>
+          )}
 
           <div className="reviews-list">
             {reviews.length === 0 ? (
@@ -400,6 +437,18 @@ const ProductDetail = () => {
             )}
           </div>
         </section>
+
+        {/* Recommended / Similar products */}
+        {similarProducts.length > 0 && (
+          <section className="similar-products-section" aria-label="Similar products">
+            <h2 className="detail-section-title">Recommended for you</h2>
+            <div className="products-grid similar-products-grid">
+              {similarProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
