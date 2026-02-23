@@ -828,17 +828,31 @@ app.get('/api/similar-products/:productId', async (req, res) => {
   try {
     const productId = parseInt(req.params.productId, 10);
     if (isNaN(productId)) return res.status(400).json({ success: false, message: 'Invalid product id' });
-    const [product] = await db.query('SELECT category_id FROM products WHERE id = ?', [productId]);
-    if (!product.length) return res.json({ success: true, data: [] });
-    const categoryId = product[0].category_id;
-    if (categoryId == null) {
-      const [others] = await db.query('SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id != ? ORDER BY p.created_at DESC LIMIT 4', [productId]);
-      return res.json({ success: true, data: others });
+    const [productRow] = await db.query('SELECT category_id FROM products WHERE id = ?', [productId]);
+    if (!productRow.length) return res.json({ success: true, data: [] });
+
+    const categoryId = productRow[0].category_id;
+    const limit = 4;
+    let similar = [];
+
+    if (categoryId != null) {
+      const [byCategory] = await db.query(
+        'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.category_id = ? AND p.id != ? ORDER BY p.created_at DESC LIMIT ?',
+        [categoryId, productId, limit]
+      );
+      similar = byCategory;
     }
-    const [similar] = await db.query(
-      'SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.category_id = ? AND p.id != ? ORDER BY p.created_at DESC LIMIT 4',
-      [categoryId, productId]
-    );
+
+    if (similar.length < limit) {
+      const excludeIds = [productId, ...similar.map(p => p.id)];
+      const placeholders = excludeIds.map(() => '?').join(',');
+      const [others] = await db.query(
+        `SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id NOT IN (${placeholders}) ORDER BY p.created_at DESC LIMIT ?`,
+        [...excludeIds, limit - similar.length]
+      );
+      similar = [...similar, ...others];
+    }
+
     res.json({ success: true, data: similar });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

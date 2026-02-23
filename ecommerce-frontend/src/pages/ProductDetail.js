@@ -383,6 +383,18 @@ const ProductDetail = () => {
           </div>
         </div>
 
+        {/* Recommended / Similar products - show right after product block */}
+        {similarProducts.length > 0 && (
+          <section className="similar-products-section" aria-label="Similar products">
+            <h2 className="detail-section-title">Recommended for you</h2>
+            <div className="products-grid similar-products-grid">
+              {similarProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Reviews */}
         <section className="product-reviews-section" aria-label="Product reviews">
           <h2 className="detail-section-title">Reviews</h2>
@@ -439,18 +451,6 @@ const ProductDetail = () => {
             )}
           </div>
         </section>
-
-        {/* Recommended / Similar products */}
-        {similarProducts.length > 0 && (
-          <section className="similar-products-section" aria-label="Similar products">
-            <h2 className="detail-section-title">Recommended for you</h2>
-            <div className="products-grid similar-products-grid">
-              {similarProducts.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     </div>
   );
