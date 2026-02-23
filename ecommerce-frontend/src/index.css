@@ -2545,7 +2545,7 @@ main {
 .product-detail-info {
     display: flex;
     flex-direction: column;
-    gap: 28px;
+    gap: 36px;
 }
 
 .product-detail-title {

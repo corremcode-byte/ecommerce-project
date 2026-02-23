@@ -52,6 +52,7 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (product && product.id) loadReviews(product.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run only when product id changes
   }, [product?.id]);
 
   useEffect(() => {
