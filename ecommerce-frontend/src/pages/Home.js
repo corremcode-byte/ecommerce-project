@@ -10,7 +10,6 @@ const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [popularProducts, setPopularProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState('all');
 
   useEffect(() => {
     loadProducts();
@@ -141,9 +140,6 @@ const Home = () => {
                   <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
               </Link>
-              <Link to="/products" className="btn btn-secondary">
-                View Lookbook
-              </Link>
             </div>
 
             {/* Stats Row */}
@@ -266,30 +262,6 @@ const Home = () => {
               ))}
             </div>
           )}
-        </section>
-
-        {/* ═══ SHOP RANGE FILTERS ═══ */}
-        <section className="shop-range-section">
-          <div className="shop-range-container">
-            <h2 className="shop-range-title">SHOP OUR RANGE</h2>
-            <div className="shop-range-filters">
-              {[
-                { label: 'All Products', count: '20', key: 'all' },
-                { label: 'Best Sellers', count: '8', key: 'best' },
-                { label: 'New Arrivals', count: '5', key: 'new' },
-                { label: 'On Sale', count: '7', key: 'sale' },
-              ].map(filter => (
-                <button
-                  key={filter.key}
-                  className={`filter-btn ${activeFilter === filter.key ? 'active' : ''}`}
-                  onClick={() => setActiveFilter(filter.key)}
-                >
-                  <span className="filter-text">{filter.label}</span>
-                  <span className="filter-count">{filter.count}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </section>
 
         {/* ═══ POPULAR PRODUCTS ═══ */}

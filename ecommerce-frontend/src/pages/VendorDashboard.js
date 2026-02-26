@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -24,6 +24,7 @@ const VendorDashboard = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const productFormRef = useRef(null);
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -113,6 +114,12 @@ const VendorDashboard = () => {
     setEditingProduct(product.id);
     setShowProductForm(true);
   };
+
+  useEffect(() => {
+    if (showProductForm && editingProduct && productFormRef.current) {
+      productFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showProductForm, editingProduct]);
 
   const handleProductSubmit = async (e) => {
     e.preventDefault();
@@ -231,7 +238,7 @@ const VendorDashboard = () => {
         </div>
 
         {showProductForm && (
-          <div className="product-form-container">
+          <div className="product-form-container" ref={productFormRef}>
             <h2 className="form-title">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
             <form onSubmit={handleProductSubmit} className="product-form">
               <div className="form-row">

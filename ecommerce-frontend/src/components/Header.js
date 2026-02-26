@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { API_URL } from '../config';
 import PromotionalBanner from './PromotionalBanner';
 
 const Header = () => {
@@ -10,6 +11,8 @@ const Header = () => {
   const { cartCount } = useCart();
   const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -27,6 +30,7 @@ const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef(null);
   const mobileMenuRef = useRef(null);
+  const searchAbortRef = useRef(null);
   const navigate = useNavigate();
 
   // Detect vendor & admin sessions from localStorage
@@ -95,6 +99,55 @@ const Header = () => {
     return () => window.removeEventListener('popstate', handleRouteChange);
   }, []);
 
+  // Search suggestions (typeahead)
+  useEffect(() => {
+    const term = searchQuery.trim();
+
+    if (term.length < 2) {
+      setSearchSuggestions([]);
+      if (searchAbortRef.current) {
+        searchAbortRef.current.abort();
+      }
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        if (searchAbortRef.current) {
+          searchAbortRef.current.abort();
+        }
+        const controller = new AbortController();
+        searchAbortRef.current = controller;
+        setSearchLoading(true);
+
+        const res = await fetch(
+          `${API_URL}/api/search?q=${encodeURIComponent(term)}`,
+          { signal: controller.signal }
+        );
+        const data = await res.json();
+        if (data.success) {
+          setSearchSuggestions(data.data || []);
+        } else {
+          setSearchSuggestions([]);
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setSearchSuggestions([]);
+        }
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  const handleSuggestionClick = (product) => {
+    setSearchQuery('');
+    setSearchSuggestions([]);
+    navigate(`/products/${product.id}`);
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -102,6 +155,7 @@ const Header = () => {
     } else {
       navigate('/products');
     }
+    setSearchSuggestions([]);
   };
 
   const handleLogout = () => {
@@ -172,6 +226,35 @@ const Header = () => {
                   <path d="m21 21-4.35-4.35"/>
                 </svg>
               </button>
+              {searchQuery.trim().length >= 2 && (searchSuggestions.length > 0 || searchLoading) && (
+                <div className="search-suggestions">
+                  {searchLoading && (
+                    <div className="search-suggestion-item search-suggestion-loading">
+                      Searching…
+                    </div>
+                  )}
+                  {!searchLoading && searchSuggestions.slice(0, 6).map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      className="search-suggestion-item"
+                      onClick={() => handleSuggestionClick(product)}
+                    >
+                      <span className="search-suggestion-name">{product.name}</span>
+                      {product.category_name && (
+                        <span className="search-suggestion-meta">
+                          {product.category_name}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                  {!searchLoading && searchSuggestions.length === 0 && (
+                    <div className="search-suggestion-item search-suggestion-empty">
+                      No matches found
+                    </div>
+                  )}
+                </div>
+              )}
             </form>
           </div>
 
@@ -399,6 +482,38 @@ const Header = () => {
                     <path d="m21 21-4.35-4.35"/>
                   </svg>
                 </button>
+                {searchQuery.trim().length >= 2 && (searchSuggestions.length > 0 || searchLoading) && (
+                  <div className="search-suggestions">
+                    {searchLoading && (
+                      <div className="search-suggestion-item search-suggestion-loading">
+                        Searching…
+                      </div>
+                    )}
+                    {!searchLoading && searchSuggestions.slice(0, 6).map((product) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        className="search-suggestion-item"
+                        onClick={() => {
+                          handleSuggestionClick(product);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        <span className="search-suggestion-name">{product.name}</span>
+                        {product.category_name && (
+                          <span className="search-suggestion-meta">
+                            {product.category_name}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                    {!searchLoading && searchSuggestions.length === 0 && (
+                      <div className="search-suggestion-item search-suggestion-empty">
+                        No matches found
+                      </div>
+                    )}
+                  </div>
+                )}
               </form>
             </div>
 
